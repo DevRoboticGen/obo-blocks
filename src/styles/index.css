@@ -36,12 +36,12 @@
   cursor: pointer;
 }
 
-.button:hover {
+.button:hover:not(.btn) {
   background-color: #1a3a59ec;
 }
 
 /* Nav-only hover so it doesn't blend into the title bar */
-#nav-collapse-toggle-button:hover {
+#nav-collapse-toggle-button:hover:not(.btn) {
   background-color: #7f7f7f;
 }
 
@@ -97,7 +97,7 @@
   display: flex;
   flex-direction: column;
   /* align-items: center; */
-  justify-content: center;
+  justify-content: flex-start;
   border-radius: 0.6rem;
   background-color: white;
   border: 0.1rem solid rgba(77, 151, 255, 0.25);
@@ -111,22 +111,26 @@
   width: 99%;
 }
 
+/* Keep Visual Blocks toolbar anchored to the top */
+.blocky-editor .button-row {
+  margin: 0.25rem 0 0.5rem;
+}
+
+/* Let the editor fill remaining space under the toolbar and image */
+.blocky-editor .editor {
+  flex: 1 1 auto;
+}
+
 .editing-image {
-  height: 50%;
-  opacity: 0;
-  transition:
-    height 0.5s,
-    opacity 1.5s;
-}
-
-.editing-image:active {
-  height: 70%;
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 50vh;
+  margin: 0.5rem 0 0.2rem 0;
   opacity: 1;
-}
-
-.editing-image:hover {
-  height: 70;
-  opacity: 1;
+  object-fit: contain;
+  border-radius: 0.5rem;
+  transition: opacity 0.4s ease;
 }
 
 
@@ -190,11 +194,11 @@ div:nth-of-type(2)::-webkit-resizer {
   background-color: #9d9d9d;
 }
 
-.button-group a:hover {
+.button-group a:hover:not(.btn) {
   background-color: #1a3a59ec;
 }
 
-.button-group a:hover {
+.button-group a:hover:not(.btn) {
   background-color: #1a3a59ec;
 }
 
@@ -202,23 +206,23 @@ div:nth-of-type(2)::-webkit-resizer {
   cursor: pointer;
 }
 
-#run-button:hover {
+#run-button:hover:not(.btn) {
   background-color: #45bd98;
 }
 
-#copy-button:hover {
+#copy-button:hover:not(.btn) {
   background-color: #32aac6;
 }
 
-#stop-button:hover {
+#stop-button:hover:not(.btn) {
   background-color: #ef476f;
 }
 
-#export-button:hover {
+#export-button:hover:not(.btn) {
   background-color: #7c4a18;
 }
 
-#edit-button:hover {
+#edit-button:hover:not(.btn) {
   background-color: #1a3a59ec;
 }
 
@@ -281,7 +285,7 @@ div:nth-of-type(2)::-webkit-resizer {
   outline: none;
 }
 
-#clear-button:hover {
+#clear-button:hover:not(.btn) {
   background-color: #db9e14;
 }
 
@@ -369,4 +373,226 @@ body {
       "code code code code"
       "output output output output";
   }
+}
+
+/* --- shadcn-like button system (layered over .button) --- */
+:root {
+  --radius: 10px;
+  --btn-h: 36px;
+
+  --fg: #0f172a;
+  --bg: #ffffff;
+  --muted: #64748b;
+  --border: #e2e8f0;
+  --ring-color: rgba(37, 99, 235, 0.35);
+
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+
+  --secondary: #111827;
+  --secondary-foreground: #ffffff;
+
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+
+  /* Added semantic colors */
+  --success: #22c55e;
+  --success-foreground: #ffffff;
+  --warning: #f59e0b;
+  --warning-foreground: #111827;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fg: #e5e7eb;
+    --bg: #0b1220;
+    --muted: #94a3b8;
+    --border: #1f2937;
+
+    --primary: #3b82f6;
+    --primary-foreground: #0b1220;
+
+    --secondary: #0b1220;
+    --secondary-foreground: #e5e7eb;
+
+    --destructive: #f43f5e;
+    --destructive-foreground: #0b1220;
+
+    /* Dark scheme semantics */
+    --success: #22c55e;
+    --success-foreground: #0b1220;
+    --warning: #f59e0b;
+    --warning-foreground: #0b1220;
+  }
+}
+
+/* Base */
+.button.btn,
+.btn {
+  -webkit-tap-highlight-color: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  height: var(--btn-h);
+  padding: 0 0.875rem;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  background: var(--btn-bg, var(--secondary));
+  color: var(--btn-fg, var(--secondary-foreground));
+  font: 500 0.95rem/1.2 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
+  text-decoration: none;
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
+  transition:
+    background-color .2s ease,
+    color .2s ease,
+    border-color .2s ease,
+    box-shadow .2s ease,
+    transform .08s ease;
+}
+
+.button.btn:hover,
+.btn:hover {
+  filter: brightness(0.98);
+}
+
+/* Slightly stronger hover for contained variants */
+.btn-primary:hover,
+.btn-secondary:hover,
+.btn-destructive:hover {
+  filter: brightness(0.96);
+}
+
+.button.btn:active,
+.btn:active {
+  transform: translateY(0.5px);
+}
+
+.button.btn:focus-visible,
+.btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ring-color);
+}
+
+/* Sizes */
+.btn-sm {
+  height: 32px;
+  padding: 0 0.65rem;
+  font-size: 0.9rem;
+  border-radius: calc(var(--radius) - 2px);
+}
+
+.btn-lg {
+  height: 42px;
+  padding: 0 1rem;
+  font-size: 1rem;
+}
+
+.btn-icon {
+  width: var(--btn-h);
+  padding: 0;
+}
+
+/* Variants */
+.btn-primary {
+  --btn-bg: var(--primary);
+  --btn-fg: var(--primary-foreground);
+}
+
+.btn-secondary {
+  --btn-bg: var(--secondary);
+  --btn-fg: var(--secondary-foreground);
+}
+
+.btn-outline {
+  --btn-bg: transparent;
+  --btn-fg: var(--fg);
+  border-color: var(--border);
+}
+
+.btn-outline:hover {
+  background: rgba(15, 23, 42, 0.05);
+}
+
+@media (prefers-color-scheme: dark) {
+  .btn-outline:hover {
+    background: rgba(255, 255, 255, 0.06);
+  }
+}
+
+.btn-ghost {
+  --btn-bg: transparent;
+  --btn-fg: var(--fg);
+}
+
+.btn-ghost:hover {
+  background: rgba(15, 23, 42, 0.06);
+}
+
+@media (prefers-color-scheme: dark) {
+  .btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.06);
+  }
+}
+
+.btn-destructive {
+  --btn-bg: var(--destructive);
+  --btn-fg: var(--destructive-foreground);
+}
+
+.btn-link {
+  --btn-bg: transparent;
+  --btn-fg: var(--primary);
+  border-color: transparent;
+  padding: 0;
+  height: auto;
+}
+
+.btn-link:hover {
+  text-decoration: underline;
+}
+
+/* New semantic variants */
+.btn-success {
+  --btn-bg: var(--success);
+  --btn-fg: var(--success-foreground);
+}
+
+.btn-success:hover {
+  background-color: #16a34a;
+}
+
+.btn-warning {
+  --btn-bg: var(--warning);
+  --btn-fg: var(--warning-foreground);
+}
+
+.btn-warning:hover {
+  background-color: #d97706;
+}
+
+/* Disabled */
+.btn[aria-disabled="true"],
+.btn:disabled,
+.button.btn.disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Optional: normalize icon sizing; gap handles spacing */
+.btn i {
+  font-size: 0.95em;
+  line-height: 1;
+}
+
+/* Improve outline contrast on dark nav bar */
+.nav-bar .btn-outline {
+  border-color: rgba(255, 255, 255, 0.5);
+  color: #ffffff;
+}
+
+.nav-bar .btn-outline:hover {
+  background: rgba(255, 255, 255, 0.12);
 }
