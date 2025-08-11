@@ -12,7 +12,46 @@
   border-radius: 5px;
   opacity: 0;
   /* transition: opacity 2s ease-in-out; */
-  z-index: 9999; /* Ensure it appears on top of other elements */
+  z-index: 9999;
+  /* Ensure it appears on top of other elements */
+}
+
+/* Global button style so buttons look consistent in nav and toolbars */
+.button {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-around;
+  margin: 0.2rem;
+  padding: 0.3rem;
+  min-width: 4rem;
+  height: 1.4rem;
+  border-radius: 0.3rem;
+  border: none;
+  color: #ffffff;
+  font-weight: 400;
+  font-size: medium;
+  background-color: #9d9d9d;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.button:hover {
+  background-color: #1a3a59ec;
+}
+
+/* Nav-only hover so it doesn't blend into the title bar */
+#nav-collapse-toggle-button:hover {
+  background-color: #7f7f7f;
+}
+
+/* Ensure symmetric margins when blocks panel is hidden */
+.container-editing .code {
+  margin-left: 0.5rem;
+}
+
+.container-editing .output {
+  margin-left: 0.5rem;
 }
 
 .notification.show {
@@ -47,6 +86,12 @@
   margin: 0.5rem 0.5rem 0.5rem 1rem;
 }
 
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .blocky-editor {
   grid-area: editor;
   display: flex;
@@ -65,21 +110,21 @@
   height: 99%;
   width: 99%;
 }
-.editing-image
-{
+
+.editing-image {
   height: 50%;
   opacity: 0;
-  transition: 
-  height 0.5s,
-  opacity 1.5s;
+  transition:
+    height 0.5s,
+    opacity 1.5s;
 }
-.editing-image:active
-{
+
+.editing-image:active {
   height: 70%;
   opacity: 1;
 }
-.editing-image:hover
-{
+
+.editing-image:hover {
   height: 70;
   opacity: 1;
 }
@@ -107,6 +152,7 @@
 div:nth-of-type(2)::-webkit-resizer {
   background: transparent;
 }
+
 .code-title {
   margin: 1rem;
   font-weight: 500;
@@ -143,9 +189,19 @@ div:nth-of-type(2)::-webkit-resizer {
   font-size: medium;
   background-color: #9d9d9d;
 }
+
+.button-group a:hover {
+  background-color: #1a3a59ec;
+}
+
+.button-group a:hover {
+  background-color: #1a3a59ec;
+}
+
 .button-group button:hover {
   cursor: pointer;
 }
+
 #run-button:hover {
   background-color: #45bd98;
 }
@@ -153,15 +209,19 @@ div:nth-of-type(2)::-webkit-resizer {
 #copy-button:hover {
   background-color: #32aac6;
 }
+
 #stop-button:hover {
   background-color: #ef476f;
 }
+
 #export-button:hover {
   background-color: #7c4a18;
 }
+
 #edit-button:hover {
   background-color: #1a3a59ec;
 }
+
 .code-snippet {
   display: flex;
   flex-direction: column;
@@ -173,14 +233,18 @@ div:nth-of-type(2)::-webkit-resizer {
   max-height: 35rem;
   overflow-y: auto;
 }
+
 .python {
   display: block;
 }
 
 .disabled {
-  pointer-events: none; /* Disable pointer events */
-  opacity: 0.6; /* Optionally, make it visually indicate the disabled state */
+  pointer-events: none;
+  /* Disable pointer events */
+  opacity: 0.6;
+  /* Optionally, make it visually indicate the disabled state */
 }
+
 .output {
   grid-area: output;
   background-color: white;
@@ -191,6 +255,7 @@ div:nth-of-type(2)::-webkit-resizer {
   margin-right: 0.5rem;
   /* overflow-y: auto; */
 }
+
 .output-title {
   margin: 1rem;
   font-weight: 500;
@@ -200,6 +265,7 @@ div:nth-of-type(2)::-webkit-resizer {
   overflow-y: auto;
   resize: vertical;
 }
+
 .terminal-output {
   margin-left: 1rem;
   color: #9d9d9d;
@@ -214,6 +280,7 @@ div:nth-of-type(2)::-webkit-resizer {
   overflow: hidden;
   outline: none;
 }
+
 #clear-button:hover {
   background-color: #db9e14;
 }
@@ -231,6 +298,7 @@ div:nth-of-type(2)::-webkit-resizer {
   grid-gap: 0.5rem;
   height: calc(100vh - 0.5rem);
 }
+
 .container-editing {
   display: grid;
   font-family: "Roboto", sans-serif;
@@ -249,6 +317,7 @@ body {
   background-color: rgba(77, 151, 255, 0.25);
   margin: 0;
 }
+
 .blocklyMainBackground {
   stroke: none;
 }

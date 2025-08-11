@@ -25,8 +25,8 @@ import { save, load, exportJson, importJson } from "./blocky/serialization";
 
 import { worker, terminal, stopWorker } from "./pyodide/loader";
 
-import { createPinButtonCallback , createADCButtonCallback ,createPWMButtonCallback, createI2CButtonCallback } from "./micropython/callback";
-import { pinCategoryFlyout ,adcCategoryFlyout , pwmCategoryFlyout ,i2cCategoryFlyout} from "./micropython/flyouts";
+import { createPinButtonCallback, createADCButtonCallback, createPWMButtonCallback, createI2CButtonCallback } from "./micropython/callback";
+import { pinCategoryFlyout, adcCategoryFlyout, pwmCategoryFlyout, i2cCategoryFlyout } from "./micropython/flyouts";
 
 let editable = false;
 let ws;
@@ -36,6 +36,7 @@ let ws;
 const editbutton = document.getElementById("edit-button");
 // const codeDiv = document.getElementById('generatedCode').firstChild;
 const blocklyDiv = document.getElementById("editor");
+const blocklyEditorPanel = document.getElementById("blocky-editor");
 const imageEDit = document.getElementById("editing-image");
 const copyButton = document.getElementById("copy-button");
 const runcodeButton = document.getElementById("run-button");
@@ -44,12 +45,19 @@ const stopButton = document.getElementById("stop-button");
 const exportButton = document.getElementById("export-button");
 const importJsonButton = document.getElementById("import-json-button");
 const exportJsonButton = document.getElementById("export-json-button");
+const collapseToggleButton = document.getElementById("collapse-toggle-button");
+const collapseToggleText = document.getElementById("collapse-toggle-text");
+const collapseToggleIcon = document.getElementById("collapse-toggle-icon");
+const navCollapseToggleButton = document.getElementById("nav-collapse-toggle-button");
+const navCollapseToggleText = document.getElementById("nav-collapse-toggle-text");
+const navCollapseToggleIcon = document.getElementById("nav-collapse-toggle-icon");
 const notification = document.getElementById("notification");
 const notificationText = document.getElementById("notificationText");
 const runButtonText = document.getElementById("run-text");
 const editbuttonText = document.getElementById("edit-text");
 const codeDiv = document.getElementById("code");
 const outputDiv = document.getElementById("output");
+let containerRoot = document.querySelector(".container") || document.querySelector(".container-editing");
 
 // ------------------- Event Listners -----------------------------
 // obo_blocks_logo.src = oboBlocksLogo
@@ -72,6 +80,8 @@ const options = {
   toolbox: toolbox,
   theme: theme,
   media: "media",
+  collapse: true,
+  trashcan: true,
   grid: {
     spacing: 20,
     length: 1,
@@ -127,14 +137,14 @@ function showNotification(message) {
 function initBlokly(workspace) {
   workspace = Blockly.inject(blocklyDiv, options);
   workspace.registerToolboxCategoryCallback("PIN", pinCategoryFlyout);
-  workspace.registerToolboxCategoryCallback("ADC",adcCategoryFlyout)
-  workspace.registerToolboxCategoryCallback("PWM",pwmCategoryFlyout)
-  workspace.registerToolboxCategoryCallback("I2C",i2cCategoryFlyout)
+  workspace.registerToolboxCategoryCallback("ADC", adcCategoryFlyout)
+  workspace.registerToolboxCategoryCallback("PWM", pwmCategoryFlyout)
+  workspace.registerToolboxCategoryCallback("I2C", i2cCategoryFlyout)
 
   workspace.registerButtonCallback("CREATE_PIN_VARIABLE", createPinButtonCallback);
-  workspace.registerButtonCallback("CREATE_ADC_VARIABLE",createADCButtonCallback);
-  workspace.registerButtonCallback("CREATE_PWM_VARIABLE",createPWMButtonCallback);
-  workspace.registerButtonCallback("CREATE_I2C_VARIABLE",createI2CButtonCallback);
+  workspace.registerButtonCallback("CREATE_ADC_VARIABLE", createADCButtonCallback);
+  workspace.registerButtonCallback("CREATE_PWM_VARIABLE", createPWMButtonCallback);
+  workspace.registerButtonCallback("CREATE_I2C_VARIABLE", createI2CButtonCallback);
 
 
   workspace.updateToolbox(toolbox)
@@ -280,6 +290,57 @@ exportJsonButton.addEventListener("click", () => {
   showNotification("Workspace exported as workspace.json");
 });
 
+collapseToggleButton.addEventListener("click", () => {
+  if (!ws || !blocklyEditorPanel || !containerRoot) return;
+  const panelCurrentlyVisible = blocklyEditorPanel.style.display !== "none";
+  const blocks = ws.getAllBlocks(false);
+
+  Blockly.Events.setGroup(true);
+  try {
+    if (panelCurrentlyVisible) {
+      // Hide entire Visual Blocks panel and collapse all blocks
+      for (const block of blocks) {
+        block.setCollapsed(true);
+      }
+      blocklyEditorPanel.style.display = "none";
+      containerRoot.className = "container-editing";
+      collapseToggleText.textContent = "Expand";
+      collapseToggleIcon.classList.remove("fa-compress");
+      collapseToggleIcon.classList.add("fa-expand");
+      if (navCollapseToggleButton) {
+        navCollapseToggleButton.style.display = "flex";
+        navCollapseToggleText.textContent = "Expand Blocks";
+        navCollapseToggleIcon.classList.remove("fa-compress");
+        navCollapseToggleIcon.classList.add("fa-expand");
+      }
+      showNotification("Collapsed Visual Blocks");
+    } else {
+      // Show panel again and expand all blocks
+      containerRoot.className = "container";
+      blocklyEditorPanel.style.display = "flex";
+      for (const block of blocks) {
+        block.setCollapsed(false);
+      }
+      // Ensure layout has applied before resize
+      setTimeout(() => ws.resize(), 0);
+      collapseToggleText.textContent = "Collapse";
+      collapseToggleIcon.classList.remove("fa-expand");
+      collapseToggleIcon.classList.add("fa-compress");
+      if (navCollapseToggleButton) {
+        navCollapseToggleButton.style.display = "none";
+      }
+      showNotification("Expanded Visual Blocks");
+    }
+  } finally {
+    Blockly.Events.setGroup(false);
+  }
+});
+
+if (navCollapseToggleButton) {
+  navCollapseToggleButton.addEventListener("click", () => {
+    collapseToggleButton?.click();
+  });
+}
 document.addEventListener("DOMContentLoaded", () => {
   makeUneditable(editable);
   notification.style.transition = "opacity 0.5s ease-in-out";
