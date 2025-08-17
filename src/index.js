@@ -31,6 +31,7 @@ import { pinCategoryFlyout, adcCategoryFlyout, pwmCategoryFlyout, i2cCategoryFly
 // ESP32 Detection and Flashing
 import ESP32Detector from "./esp32/detection";
 import ESP32Flasher from "./esp32/flash";
+import ESP32REPL from "./esp32/repl";
 
 let editable = false;
 let ws;
@@ -38,6 +39,7 @@ let ws;
 // ESP32 Detection and Flashing
 const esp32Detector = new ESP32Detector();
 const esp32Flasher = new ESP32Flasher();
+const esp32REPL = new ESP32REPL();
 let currentESP32Device = null;
 
 // ------------------ Elements -------------------------
@@ -53,7 +55,10 @@ const clearButton = document.getElementById("clear-button");
 const stopButton = document.getElementById("stop-button");
 const exportButton = document.getElementById("export-button");
 const esp32DetectButton = document.getElementById("esp32-detect-button");
+const esp32ConnectButton = document.getElementById("esp32-connect-button");
 const esp32FlashButton = document.getElementById("esp32-flash-button");
+const esp32EraseButton = document.getElementById("esp32-erase-button");
+const esp32ReplButton = document.getElementById("esp32-repl-button");
 const importJsonButton = document.getElementById("import-json-button");
 const exportJsonButton = document.getElementById("export-json-button");
 const collapseToggleButton = document.getElementById("collapse-toggle-button");
@@ -61,9 +66,12 @@ const collapseToggleButton = document.getElementById("collapse-toggle-button");
 // Output tabs
 const pythonOutputTab = document.getElementById("python-output-tab");
 const deviceOutputTab = document.getElementById("device-output-tab");
+const serialMonitorTab = document.getElementById("serial-monitor-tab");
 const pythonOutputPanel = document.getElementById("python-output-panel");
 const deviceOutputPanel = document.getElementById("device-output-panel");
+const serialMonitorPanel = document.getElementById("serial-monitor-panel");
 const deviceTerminal = document.getElementById("device-terminal-output");
+const serialTerminal = document.getElementById("serial-terminal");
 const collapseToggleText = document.getElementById("collapse-toggle-text");
 const collapseToggleIcon = document.getElementById("collapse-toggle-icon");
 const navCollapseToggleButton = document.getElementById("nav-collapse-toggle-button");
@@ -75,6 +83,12 @@ const runButtonText = document.getElementById("run-text");
 const editbuttonText = document.getElementById("edit-text");
 const codeDiv = document.getElementById("code");
 const outputDiv = document.getElementById("output");
+
+// Initialize ESP32 dropdown items as hidden
+esp32FlashButton.style.display = 'none';
+esp32EraseButton.style.display = 'none';
+esp32ReplButton.style.display = 'none';
+
 function getContainerRoot() {
   return document.querySelector(".container") || document.querySelector(".container-editing");
 }
@@ -261,6 +275,8 @@ clearButton.addEventListener("click", () => {
     terminal.value = "Python 3.10 \n>>> ";
   } else if (deviceOutputPanel.classList.contains('active')) {
     deviceTerminal.value = "";
+  } else if (serialMonitorPanel.classList.contains('active')) {
+    initializeTerminal();
   }
   showNotification("Terminal cleared");
 });
@@ -292,12 +308,221 @@ function switchTab(tabName) {
   } else if (tabName === 'device-output') {
     deviceOutputTab.classList.add('active');
     deviceOutputPanel.classList.add('active');
+  } else if (tabName === 'serial-monitor') {
+    serialMonitorTab.classList.add('active');
+    serialMonitorPanel.classList.add('active');
   }
 }
 
 // Tab event listeners
 pythonOutputTab.addEventListener("click", () => switchTab('python-output'));
 deviceOutputTab.addEventListener("click", () => switchTab('device-output'));
+serialMonitorTab.addEventListener("click", () => switchTab('serial-monitor'));
+
+// Terminal functionality
+let commandHistory = [];
+let historyIndex = -1;
+let currentCommand = '';
+let isWaitingForResponse = false;
+let responseBuffer = '';
+
+serialTerminal.addEventListener("keydown", async (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    await executeCommand();
+  } else if (event.key === "ArrowUp") {
+    event.preventDefault();
+    navigateHistory(-1);
+  } else if (event.key === "ArrowDown") {
+    event.preventDefault();
+    navigateHistory(1);
+  } else if (event.key === "Backspace") {
+    // Prevent backspace from deleting the prompt
+    const selection = window.getSelection();
+    if (selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      const promptNode = findPromptNode(range.startContainer);
+      if (promptNode && range.startOffset <= promptNode.textContent.length) {
+        event.preventDefault();
+        return;
+      }
+    }
+  }
+});
+
+// Prevent paste of formatted text
+serialTerminal.addEventListener("paste", (event) => {
+  event.preventDefault();
+  const text = event.clipboardData.getData("text/plain");
+  document.execCommand("insertText", false, text);
+});
+
+// Focus terminal when clicked
+serialTerminal.addEventListener("click", () => {
+  serialTerminal.focus();
+  // Ensure scroll to bottom when clicked
+  serialTerminal.scrollTop = serialTerminal.scrollHeight;
+});
+
+// Terminal helper functions
+function findPromptNode(node) {
+  while (node && node.nodeType !== Node.TEXT_NODE) {
+    node = node.firstChild;
+  }
+  if (node && node.textContent.includes('>>>')) {
+    return node;
+  }
+  return null;
+}
+
+function navigateHistory(direction) {
+  if (commandHistory.length === 0) return;
+
+  if (direction === -1 && historyIndex < commandHistory.length - 1) {
+    historyIndex++;
+  } else if (direction === 1 && historyIndex > 0) {
+    historyIndex--;
+  } else if (direction === 1 && historyIndex === 0) {
+    historyIndex = -1;
+    replaceCurrentLine('');
+    return;
+  }
+
+  if (historyIndex >= 0) {
+    replaceCurrentLine(commandHistory[commandHistory.length - 1 - historyIndex]);
+  }
+}
+
+function replaceCurrentLine(text) {
+  const selection = window.getSelection();
+  if (selection.rangeCount > 0) {
+    const range = selection.getRangeAt(0);
+    const promptNode = findPromptNode(range.startContainer);
+    if (promptNode) {
+      const promptText = promptNode.textContent;
+      const promptEnd = promptText.lastIndexOf('>>>') + 3;
+      const newText = promptText.substring(0, promptEnd) + ' ' + text;
+      promptNode.textContent = newText;
+
+      // Set cursor at end
+      const newRange = document.createRange();
+      newRange.setStart(promptNode, 1);
+      newRange.setEnd(promptNode, 1);
+      newRange.collapse(false);
+      selection.removeAllRanges();
+      selection.addRange(newRange);
+    }
+  }
+}
+
+function appendToTerminal(text, className = '') {
+  const span = document.createElement('span');
+  if (className) span.className = className;
+  span.textContent = text;
+  serialTerminal.appendChild(span);
+
+  // Force scroll to bottom
+  setTimeout(() => {
+    serialTerminal.scrollTop = serialTerminal.scrollHeight;
+  }, 0);
+}
+
+function appendOutput(text) {
+  // Create a separate output span
+  const outputSpan = document.createElement('span');
+  outputSpan.className = 'output';
+  outputSpan.textContent = text;
+  serialTerminal.appendChild(outputSpan);
+
+  // Force scroll to bottom
+  setTimeout(() => {
+    serialTerminal.scrollTop = serialTerminal.scrollHeight;
+  }, 0);
+}
+
+function getCurrentCommand() {
+  const selection = window.getSelection();
+  if (selection.rangeCount > 0) {
+    const range = selection.getRangeAt(0);
+    const promptNode = findPromptNode(range.startContainer);
+    if (promptNode) {
+      const promptText = promptNode.textContent;
+      const promptEnd = promptText.lastIndexOf('>>>') + 3;
+      return promptText.substring(promptEnd).trim();
+    }
+  }
+  return '';
+}
+
+function addPrompt() {
+  appendToTerminal('\n>>> ', 'prompt');
+  serialTerminal.focus();
+
+  // Set cursor at end
+  const selection = window.getSelection();
+  const range = document.createRange();
+  range.selectNodeContents(serialTerminal);
+  range.collapse(false);
+  selection.removeAllRanges();
+  selection.addRange(range);
+}
+
+async function executeCommand() {
+  const command = getCurrentCommand();
+  if (!command) {
+    addPrompt();
+    return;
+  }
+
+  if (!esp32REPL.isREPLConnected()) {
+    appendToTerminal('Error: REPL not connected\n', 'error');
+    addPrompt();
+    return;
+  }
+
+  // Add command to history
+  if (command && !commandHistory.includes(command)) {
+    commandHistory.push(command);
+  }
+  historyIndex = -1;
+
+  // Set waiting flag
+  isWaitingForResponse = true;
+  responseBuffer = '';
+
+  try {
+    // Send command to ESP32
+    await esp32REPL.sendCommand(command + '\n');
+
+    // Set a timeout to add prompt if no response received
+    setTimeout(() => {
+      if (isWaitingForResponse) {
+        appendToTerminal('\n>>> ', 'prompt');
+        isWaitingForResponse = false;
+        responseBuffer = '';
+        serialTerminal.focus();
+      }
+    }, 2000); // 2 second timeout
+
+  } catch (error) {
+    console.error("Error executing command:", error);
+    appendToTerminal(`Error: ${error.message}\n`, 'error');
+    isWaitingForResponse = false;
+    addPrompt();
+  }
+}
+
+function initializeTerminal() {
+  serialTerminal.innerHTML = '';
+  appendToTerminal('MicroPython REPL Terminal\n', 'welcome');
+  appendToTerminal('Type "help()" for more information.\n', 'welcome');
+  appendToTerminal('\n>>> ', 'prompt');
+  serialTerminal.focus();
+
+  // Ensure scrolling is enabled
+  serialTerminal.style.overflowY = 'scroll';
+  serialTerminal.scrollTop = serialTerminal.scrollHeight;
+}
 
 // ESP32 Detection functionality
 esp32DetectButton.addEventListener("click", async () => {
@@ -320,8 +545,14 @@ esp32DetectButton.addEventListener("click", async () => {
       const esp32DetectText = document.getElementById("esp32-detect-text");
       esp32DetectText.textContent = `ESP32 (✓)`;
 
-      // Show flash button
-      esp32FlashButton.style.display = 'flex';
+      // Show dropdown items (Flash, Erase, REPL) and change Connect to Disconnect
+      esp32FlashButton.style.display = 'block';
+      esp32EraseButton.style.display = 'block';
+      esp32ReplButton.style.display = 'block';
+
+      // Change Connect button to Disconnect
+      esp32ConnectButton.innerHTML = '<i class="fa fa-unlink"></i> Disconnect';
+      esp32ConnectButton.id = 'esp32-disconnect-button';
 
       // Log device info to device terminal
       deviceTerminal.value += `\nESP32 Device Selected:\n`;
@@ -386,10 +617,20 @@ esp32FlashButton.addEventListener("click", async () => {
     await esp32Flasher.flashFirmware(currentESP32Device, firmwareInfo, updateProgress);
 
     deviceTerminal.value += `\n✅ MicroPython firmware flashed successfully!\n`;
-    deviceTerminal.value += `ESP32 is now ready for MicroPython development.\n\n`;
+    deviceTerminal.value += `ESP32 is now ready for MicroPython development.\n`;
+    deviceTerminal.value += `Note: Device has been reset. You may need to reconnect if you want to perform more operations.\n\n`;
     deviceTerminal.scrollTop = deviceTerminal.scrollHeight;
 
     showNotification("MicroPython firmware flashed successfully!");
+
+    // Reset connection state after successful flash
+    currentESP32Device = null;
+    const esp32DetectText = document.getElementById("esp32-detect-text");
+    esp32DetectText.textContent = "ESP32";
+    esp32FlashButton.style.display = 'none';
+    esp32EraseButton.style.display = 'none';
+    esp32ConnectButton.innerHTML = '<i class="fa fa-link"></i> Connect';
+    esp32ConnectButton.id = 'esp32-connect-button';
 
   } catch (error) {
     console.error("Firmware flashing error:", error);
@@ -399,6 +640,187 @@ esp32FlashButton.addEventListener("click", async () => {
     deviceTerminal.scrollTop = deviceTerminal.scrollHeight;
 
     showNotification(`Firmware flashing failed: ${error.message}`);
+  }
+});
+
+// ESP32 Erase functionality
+esp32EraseButton.addEventListener("click", async () => {
+  if (!currentESP32Device) {
+    showNotification("No ESP32 device connected");
+    return;
+  }
+
+  try {
+    showNotification("Starting ESP32 flash erase...");
+
+    // Switch to device output tab
+    switchTab('device-output');
+
+    deviceTerminal.value += `\nStarting ESP32 Flash Erase:\n`;
+    deviceTerminal.value += `This will erase ALL data from the ESP32 flash memory.\n`;
+    deviceTerminal.value += `This action cannot be undone!\n\n`;
+    deviceTerminal.scrollTop = deviceTerminal.scrollHeight;
+
+    // Progress callback function
+    const updateProgress = (percentage, message) => {
+      deviceTerminal.value += `[${percentage}%] ${message}\n`;
+      deviceTerminal.scrollTop = deviceTerminal.scrollHeight;
+    };
+
+    // Erase the flash
+    await esp32Flasher.eraseFlash(currentESP32Device, updateProgress);
+
+    deviceTerminal.value += `\n✅ ESP32 flash erased successfully!\n`;
+    deviceTerminal.value += `All data has been removed from the device.\n`;
+    deviceTerminal.value += `Note: Device has been reset. You may need to reconnect if you want to perform more operations.\n\n`;
+    deviceTerminal.scrollTop = deviceTerminal.scrollHeight;
+
+    showNotification("ESP32 flash erased successfully!");
+
+    // Reset connection state after successful erase
+    currentESP32Device = null;
+    const esp32DetectText = document.getElementById("esp32-detect-text");
+    esp32DetectText.textContent = "ESP32";
+    esp32FlashButton.style.display = 'none';
+    esp32EraseButton.style.display = 'none';
+    esp32ConnectButton.innerHTML = '<i class="fa fa-link"></i> Connect';
+    esp32ConnectButton.id = 'esp32-connect-button';
+
+  } catch (error) {
+    console.error("Flash erase error:", error);
+
+    deviceTerminal.value += `\n❌ Flash erase failed: ${error.message}\n`;
+    deviceTerminal.value += `Make sure ESP32 is in download mode (hold BOOT button while connecting).\n\n`;
+    deviceTerminal.scrollTop = deviceTerminal.scrollHeight;
+
+    showNotification(`Flash erase failed: ${error.message}`);
+  }
+});
+
+// ESP32 Connect/Disconnect functionality
+esp32ConnectButton.addEventListener("click", async () => {
+  if (currentESP32Device) {
+    // Disconnect mode
+    try {
+      // Close REPL connection if open
+      if (esp32REPL.isREPLConnected()) {
+        await esp32REPL.closeREPL();
+      }
+
+      // Close the port if it's open
+      if (currentESP32Device.port && currentESP32Device.port.readable) {
+        await currentESP32Device.port.close();
+      }
+
+      // Reset the UI
+      const esp32DetectText = document.getElementById("esp32-detect-text");
+      esp32DetectText.textContent = "ESP32";
+
+      // Hide dropdown items
+      esp32FlashButton.style.display = 'none';
+      esp32EraseButton.style.display = 'none';
+      esp32ReplButton.style.display = 'none';
+
+      // Change Disconnect button back to Connect
+      esp32ConnectButton.innerHTML = '<i class="fa fa-link"></i> Connect';
+      esp32ConnectButton.id = 'esp32-connect-button';
+
+      // Clear device reference
+      currentESP32Device = null;
+
+      // Log disconnect to device terminal
+      deviceTerminal.value += `\nESP32 Device Disconnected\n`;
+      deviceTerminal.value += `Status: Disconnected\n\n`;
+      deviceTerminal.scrollTop = deviceTerminal.scrollHeight;
+
+      // Switch to device output tab
+      switchTab('device-output');
+
+      showNotification("ESP32 device disconnected");
+
+    } catch (error) {
+      console.error("Disconnect error:", error);
+      showNotification(`Disconnect failed: ${error.message}`);
+    }
+  } else {
+    // Connect mode - trigger the ESP32 detection
+    esp32DetectButton.click();
+  }
+});
+
+// ESP32 REPL functionality
+esp32ReplButton.addEventListener("click", async () => {
+  if (!currentESP32Device) {
+    showNotification("No ESP32 device connected");
+    return;
+  }
+
+  try {
+    showNotification("Opening REPL connection...");
+
+    // Switch to serial monitor tab
+    switchTab('serial-monitor');
+
+    // Initialize terminal
+    initializeTerminal();
+
+    // Open REPL connection
+    await esp32REPL.openREPL(currentESP32Device);
+
+    // Set up data receiver
+    esp32REPL.onDataReceived = (data) => {
+      // Handle initial boot messages (before first prompt)
+      if (!responseBuffer.includes('>>>') && !isWaitingForResponse) {
+        appendOutput(data);
+        return;
+      }
+
+      // Buffer the response
+      responseBuffer += data;
+
+      // Check if we have a complete response (ends with >>> prompt)
+      if (responseBuffer.includes('>>>')) {
+        // Split by the last >>> to separate output from new prompt
+        const parts = responseBuffer.split('>>>');
+        const output = parts.slice(0, -1).join('>>>').trim();
+        const newPrompt = parts[parts.length - 1];
+
+        // Display the output
+        if (output) {
+          appendOutput(output + '\n');
+        }
+
+        // Add new prompt
+        appendToTerminal('>>> ', 'prompt');
+
+        // Reset waiting state
+        isWaitingForResponse = false;
+        responseBuffer = '';
+
+        // Focus terminal
+        serialTerminal.focus();
+
+        // Set cursor at end
+        const selection = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(serialTerminal);
+        range.collapse(false);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      } else {
+        // Partial response, just display what we have
+        appendOutput(data);
+      }
+    };
+
+    showNotification("REPL connection opened successfully!");
+
+  } catch (error) {
+    console.error("REPL error:", error);
+    showNotification(`REPL failed: ${error.message}`);
+
+    // Show error in terminal
+    appendToTerminal(`Error: ${error.message}\n`, 'error');
   }
 });
 

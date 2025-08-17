@@ -197,12 +197,118 @@ class ESP32Flasher {
             const hardReset = new HardReset(transport);
             await hardReset.reset();
 
+            // Close the port after reset to prevent stream issues
+            try {
+                await device.port.close();
+                console.log('Port closed after reset');
+            } catch (closeError) {
+                console.log('Port already closed or error closing:', closeError.message);
+            }
+
             progressCallback(100, 'Firmware flashed successfully!');
             console.log('Firmware flashing completed successfully');
 
             return true;
         } catch (error) {
             console.error('Error flashing firmware:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Erase ESP32 flash memory
+     */
+    async eraseFlash(device, progressCallback) {
+        try {
+            // Create terminal for esptool-js
+            const terminal = {
+                clean: () => {
+                    console.log('Terminal clean');
+                },
+                writeLine: (data) => {
+                    console.log(data);
+                    // Update progress based on key messages
+                    if (data.includes('Detecting chip type')) {
+                        progressCallback(20, 'Detecting chip type...');
+                    } else if (data.includes('Chip is ESP32')) {
+                        progressCallback(30, 'Chip detected: ESP32');
+                    } else if (data.includes('Uploading stub')) {
+                        progressCallback(40, 'Uploading stub...');
+                    } else if (data.includes('Running stub')) {
+                        progressCallback(50, 'Running stub...');
+                    } else if (data.includes('Stub running')) {
+                        progressCallback(60, 'Stub running...');
+                    } else if (data.includes('Erasing flash')) {
+                        progressCallback(70, 'Erasing flash...');
+                    } else if (data.includes('Chip erase completed')) {
+                        progressCallback(90, 'Chip erase completed');
+                    } else if (data.includes('Leaving')) {
+                        progressCallback(95, 'Leaving...');
+                    } else if (data.includes('Hard resetting')) {
+                        progressCallback(98, 'Hard resetting...');
+                    }
+                },
+                write: (data) => {
+                    console.log(data);
+                }
+            };
+
+            // Initialize ESPLoader with the device port
+            progressCallback(10, 'Initializing ESP32 connection...');
+
+            // Check port state but don't open it manually
+            console.log('Port state:', {
+                readable: device.port.readable,
+                writable: device.port.writable
+            });
+
+            // Create transport with proper configuration
+            console.log('Creating transport...');
+            const transport = new Transport(device.port);
+            console.log('Creating ESPLoader...');
+            const loader = new ESPLoader({
+                transport: transport,
+                baudrate: 115200,
+                terminal: terminal
+            });
+            console.log('ESPLoader created successfully');
+
+            // Connect to ESP32 (simplified like official demo)
+            progressCallback(15, 'Connecting to ESP32...');
+            console.log('Connecting...');
+
+            const chip = await loader.connect();
+            console.log('Connected to chip:', chip);
+
+            // Erase the flash using direct command
+            progressCallback(70, 'Erasing flash...');
+
+            // Use the ESP_ERASE_FLASH command directly
+            await loader.command(loader.ESP_ERASE_FLASH, 0, 0, 0);
+
+            // Wait for erase to complete
+            progressCallback(85, 'Waiting for erase to complete...');
+            await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds for erase
+
+            // Reset device using HardReset class
+            progressCallback(98, 'Hard resetting...');
+            const hardReset = new HardReset(transport);
+            await hardReset.reset();
+
+            // Close the port after reset to prevent stream issues
+            try {
+                await device.port.close();
+                console.log('Port closed after reset');
+            } catch (closeError) {
+                console.log('Port already closed or error closing:', closeError.message);
+            }
+
+            progressCallback(100, 'Flash erased successfully!');
+            console.log('Flash erase completed successfully');
+
+            return true;
+        } catch (error) {
+            console.error('Error erasing flash:', error);
             throw error;
         }
     }

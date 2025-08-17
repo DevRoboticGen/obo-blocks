@@ -295,10 +295,81 @@ div:nth-of-type(2)::-webkit-resizer {
 
 .output-panel {
   display: none;
+  height: 100%;
+  min-height: 300px;
 }
 
 .output-panel.active {
   display: block;
+  height: 100%;
+  min-height: 300px;
+}
+
+/* Serial Monitor Styles */
+.serial-monitor-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 300px;
+  margin-left: 1rem;
+  width: 95%;
+}
+
+.serial-terminal {
+  flex: 1;
+  background-color: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 10px;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.4;
+  color: #ffffff;
+  overflow-y: scroll;
+  overflow-x: hidden;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  height: 300px;
+  max-height: 300px;
+  outline: none;
+  caret-color: #ffffff;
+  position: relative;
+}
+
+.serial-terminal:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+/* Terminal prompt styling */
+.serial-terminal .prompt {
+  color: #00ff00;
+  font-weight: bold;
+}
+
+.serial-terminal .command {
+  color: #ffffff;
+}
+
+.serial-terminal .output {
+  color: #cccccc;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.serial-terminal .error {
+  color: #ff4444;
+}
+
+.serial-terminal .welcome {
+  color: #8888ff;
+}
+
+/* Ensure proper text wrapping for long lines */
+.serial-terminal span {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  display: inline;
 }
 
 /* Dropdown Button Styles */
