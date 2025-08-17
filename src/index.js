@@ -89,8 +89,56 @@ esp32FlashButton.style.display = 'none';
 esp32EraseButton.style.display = 'none';
 esp32ReplButton.style.display = 'none';
 
+// Get references to dropdown elements  
+const esp32DropdownButton = esp32DetectButton.closest('.dropdown-button');
+const esp32DropdownArrow = esp32DropdownButton?.querySelector('.dropdown-arrow');
+const esp32DropdownContent = esp32DropdownButton?.querySelector('.dropdown-content');
+
+// Initially hide only the dropdown arrow and content when no device is connected
+if (esp32DropdownArrow) {
+  esp32DropdownArrow.style.display = 'none';
+}
+if (esp32DropdownContent) {
+  esp32DropdownContent.style.display = 'none';
+}
+// Add disabled class to prevent hover behavior
+if (esp32DropdownButton) {
+  esp32DropdownButton.classList.add('dropdown-disabled');
+  esp32DropdownButton.classList.remove('dropdown-enabled');
+}
+
 function getContainerRoot() {
   return document.querySelector(".container") || document.querySelector(".container-editing");
+}
+
+// Helper function to properly close REPL and clean up terminal
+async function closeAndCleanupREPL(disconnectionMessage = 'REPL connection closed.\nConnect to ESP32 and open REPL to start a new session.\n') {
+  if (esp32REPL.isREPLConnected()) {
+    await esp32REPL.closeREPL();
+
+    // Clear terminal content and reset state
+    terminalContent = '';
+    serialTerminal.textContent = '';
+
+    // Reset terminal state variables
+    isWaitingForResponse = false;
+    responseBuffer = '';
+    lastSentCommand = '';
+    isMultiLineMode = false;
+    multiLineBuffer = [];
+    currentIndentLevel = 0;
+    commandHistory = [];
+    historyIndex = -1;
+
+    // Remove input field if it exists
+    if (inputField) {
+      inputField.remove();
+      inputField = null;
+    }
+
+    // Add disconnection message to terminal
+    serialTerminal.textContent = disconnectionMessage;
+  }
 }
 
 // ------------------- Event Listners -----------------------------
@@ -276,20 +324,54 @@ clearButton.addEventListener("click", () => {
   } else if (deviceOutputPanel.classList.contains('active')) {
     deviceTerminal.value = "";
   } else if (serialMonitorPanel.classList.contains('active')) {
+    // Clear our state
     terminalContent = '';
     serialTerminal.textContent = '';
-    appendToTerminal('>>> ');
     lastSentCommand = ''; // Clear stored command when clearing terminal
+    isMultiLineMode = false; // Exit multi-line mode
+    multiLineBuffer = [];
+    currentIndentLevel = 0;
+    isWaitingForResponse = false;
+    responseBuffer = '';
+
+    // Send Ctrl+C to reset ESP32 state if connected, otherwise just add prompt
+    try {
+      if (esp32REPL.isREPLConnected()) {
+        esp32REPL.sendCommand('\x03'); // Ctrl+C - ESP32 will respond with its own prompt
+      } else {
+        appendToTerminal('>>> '); // Only add prompt if not connected
+      }
+    } catch (error) {
+      console.error("Error sending Ctrl+C:", error);
+      appendToTerminal('>>> '); // Fallback - add prompt if Ctrl+C fails
+    }
+
     if (inputField) {
       inputField.value = '';
+      resetInputPlaceholder();
       inputField.focus();
     }
   }
   showNotification("Terminal cleared");
 });
 
-stopButton.addEventListener("click", () => {
-  stopWorker();
+stopButton.addEventListener("click", async () => {
+  // Check if we're in serial monitor (REPL) mode
+  if (serialMonitorPanel.classList.contains('active') && esp32REPL.isREPLConnected()) {
+    try {
+      // Send Ctrl+D for soft reset in MicroPython
+      await esp32REPL.sendCommand('\x04'); // EOT (End of Transmission) - Ctrl+D
+      appendToTerminal('Soft reset...\n');
+      showNotification("ESP32 soft reset sent");
+    } catch (error) {
+      console.error("Error sending soft reset:", error);
+      appendToTerminal(`Error sending soft reset: ${error.message}\n`);
+      showNotification("Failed to send soft reset");
+    }
+  } else {
+    // Default behavior for Python execution
+    stopWorker();
+  }
 });
 
 exportButton.addEventListener("click", () => {
@@ -334,6 +416,9 @@ let responseBuffer = '';
 let terminalContent = '';
 let currentLine = '';
 let lastSentCommand = '';
+let isMultiLineMode = false;
+let multiLineBuffer = [];
+let currentIndentLevel = 0;
 
 // Convert contentEditable to textarea for simpler management
 serialTerminal.contentEditable = false;
@@ -364,7 +449,7 @@ function createInputField() {
   inputField.style.fontFamily = 'monospace';
   inputField.style.fontSize = '14px';
   inputField.style.padding = '5px';
-  inputField.placeholder = 'Enter MicroPython command...';
+  inputField.placeholder = 'Enter MicroPython command... (type help() for help)';
 
   // Position terminal container relatively
   serialTerminal.parentElement.style.position = 'relative';
@@ -382,6 +467,41 @@ function createInputField() {
     } else if (event.key === "ArrowDown") {
       event.preventDefault();
       navigateHistory(1);
+    } else if (event.key === "Escape") {
+      // ESC to exit multi-line mode or recover from stuck state
+      event.preventDefault();
+
+      if (isMultiLineMode || serialTerminal.textContent.endsWith('... ')) {
+        // Send Ctrl+C to interrupt and reset ESP32 REPL state
+        try {
+          esp32REPL.sendCommand('\x03'); // Ctrl+C - ESP32 will respond with KeyboardInterrupt and prompt
+        } catch (error) {
+          appendToTerminal('\n>>> '); // Only add prompt if Ctrl+C fails
+        }
+      }
+
+      // Reset our state
+      isMultiLineMode = false;
+      multiLineBuffer = [];
+      currentIndentLevel = 0;
+      isWaitingForResponse = false;
+      responseBuffer = '';
+      clearInput();
+      resetInputPlaceholder();
+      inputField.focus();
+    } else if (event.key === "Backspace" && isMultiLineMode) {
+      // Handle dedenting in multi-line mode
+      const currentValue = inputField.value;
+      const cursorPos = inputField.selectionStart;
+
+      // If cursor is at beginning and we have indentation, dedent by 4 spaces
+      if (cursorPos <= currentIndentLevel && currentValue.startsWith(' '.repeat(currentIndentLevel))) {
+        event.preventDefault();
+        currentIndentLevel = Math.max(0, currentIndentLevel - 4);
+        const newIndent = ' '.repeat(currentIndentLevel);
+        inputField.value = newIndent + currentValue.substring(cursorPos);
+        inputField.selectionStart = inputField.selectionEnd = currentIndentLevel;
+      }
     }
   });
 
@@ -436,25 +556,191 @@ function clearInput() {
   }
 }
 
+function resetInputPlaceholder() {
+  if (inputField) {
+    inputField.placeholder = 'Enter MicroPython command... (type help() for help)';
+  }
+}
+
 async function executeCommand() {
   const command = getCurrentCommand();
-  if (!command) {
-    return;
-  }
 
   if (!esp32REPL.isREPLConnected()) {
     appendToTerminal('Error: REPL not connected\n');
     return;
   }
 
+  // Handle multi-line mode
+  if (isMultiLineMode) {
+    if (command.trim() === '') {
+      // Empty line in multi-line mode - send empty line to execute the block
+      try {
+        // Send empty line to MicroPython to execute the block
+        await esp32REPL.sendCommand('\n');
+
+        // Set waiting for response and exit multi-line mode
+        isWaitingForResponse = true;
+        responseBuffer = '';
+        lastSentCommand = ''; // Clear this for multi-line execution
+        isMultiLineMode = false;
+        multiLineBuffer = [];
+        currentIndentLevel = 0;
+        clearInput();
+        resetInputPlaceholder();
+
+        // Set timeout in case no response
+        setTimeout(() => {
+          if (isWaitingForResponse) {
+            appendToTerminal('>>> ');
+            isWaitingForResponse = false;
+            if (inputField) inputField.focus();
+          }
+        }, 3000);
+
+      } catch (error) {
+        console.error("Error executing multi-line block:", error);
+        appendToTerminal(`Error: ${error.message}\n>>> `);
+        isWaitingForResponse = false;
+        isMultiLineMode = false;
+        multiLineBuffer = [];
+        currentIndentLevel = 0;
+        if (inputField) {
+          resetInputPlaceholder();
+          inputField.focus();
+        }
+      }
+
+      return;
+    } else {
+      // Send this line immediately to MicroPython
+      multiLineBuffer.push(command);
+      clearInput();
+
+      // Check if we need to increase indent level
+      if (command.trim().endsWith(':')) {
+        currentIndentLevel += 4;
+      }
+
+      try {
+        // Send the line to ESP32 immediately
+        await esp32REPL.sendCommand(command + '\n');
+
+        // Prepare input field with proper indentation for next line
+        const indent = ' '.repeat(currentIndentLevel);
+        if (inputField) {
+          inputField.value = indent;
+          inputField.placeholder = 'Continue block... (Enter on empty line to execute, ESC to cancel)';
+          inputField.focus();
+        }
+
+      } catch (error) {
+        console.error("Error sending line:", error);
+        appendToTerminal(`Error: ${error.message}\n>>> `);
+        isMultiLineMode = false;
+        multiLineBuffer = [];
+        currentIndentLevel = 0;
+        if (inputField) {
+          resetInputPlaceholder();
+          inputField.focus();
+        }
+      }
+
+      return;
+    }
+  }
+
+  // Single line or start of multi-line
+  if (!command) {
+    // If no command but ESP32 might be stuck in multi-line mode
+    if (serialTerminal.textContent.includes('... ')) {
+      try {
+        // Send empty line to try to execute any pending block
+        await esp32REPL.sendCommand('\n');
+        isWaitingForResponse = true;
+        responseBuffer = '';
+        setTimeout(() => {
+          if (isWaitingForResponse) {
+            appendToTerminal('>>> ');
+            isWaitingForResponse = false;
+            if (inputField) inputField.focus();
+          }
+        }, 2000);
+      } catch (error) {
+        console.error("Error sending empty line:", error);
+      }
+    }
+    return;
+  }
+
+  // Check if this starts a multi-line block
+  if (command.trim().endsWith(':') && (
+    command.trim().startsWith('def ') ||
+    command.trim().startsWith('class ') ||
+    command.trim().startsWith('if ') ||
+    command.trim().startsWith('elif ') ||
+    command.trim().startsWith('else:') ||
+    command.trim().startsWith('for ') ||
+    command.trim().startsWith('while ') ||
+    command.trim().startsWith('try:') ||
+    command.trim().startsWith('except ') ||
+    command.trim().startsWith('finally:') ||
+    command.trim().startsWith('with ')
+  )) {
+    // Enter multi-line mode - send the first line to MicroPython
+    isMultiLineMode = true;
+    multiLineBuffer = [command];
+    currentIndentLevel = 4; // Standard Python indentation
+    clearInput();
+
+    try {
+      // Send the first line to ESP32 to start multi-line mode
+      await esp32REPL.sendCommand(command + '\n');
+
+      // Prepare input field with indentation for next line
+      const indent = ' '.repeat(currentIndentLevel);
+      if (inputField) {
+        inputField.value = indent;
+        inputField.placeholder = 'Continue block... (Enter on empty line to execute, ESC to cancel)';
+        inputField.focus();
+      }
+
+    } catch (error) {
+      console.error("Error starting multi-line mode:", error);
+      appendToTerminal(`Error: ${error.message}\n>>> `);
+      isMultiLineMode = false;
+      multiLineBuffer = [];
+      currentIndentLevel = 0;
+      if (inputField) {
+        resetInputPlaceholder();
+        inputField.focus();
+      }
+      return;
+    }
+
+    return;
+  }
+
+  // Regular single-line command
+  await executeFullCommand(command);
+}
+
+async function executeFullCommand(command) {
   // Add command to history
   if (command && !commandHistory.includes(command)) {
     commandHistory.push(command);
   }
   historyIndex = -1;
 
-  // Show the command with prompt first
-  appendToTerminal(`${command}\n`);
+  // Show the command with prompt first (if not already shown in multi-line mode)
+  if (!isMultiLineMode) {
+    appendToTerminal(`${command}\n`);
+  }
+
+  // Exit multi-line mode after execution
+  isMultiLineMode = false;
+  multiLineBuffer = [];
+  currentIndentLevel = 0;
+
   clearInput();
   isWaitingForResponse = true;
   responseBuffer = '';
@@ -471,7 +757,13 @@ async function executeCommand() {
         isWaitingForResponse = false;
         responseBuffer = '';
         lastSentCommand = ''; // Clear stored command on timeout
-        if (inputField) inputField.focus();
+        isMultiLineMode = false;
+        multiLineBuffer = [];
+        currentIndentLevel = 0;
+        if (inputField) {
+          resetInputPlaceholder();
+          inputField.focus();
+        }
       }
     }, 2000); // 2 second timeout
 
@@ -480,7 +772,13 @@ async function executeCommand() {
     appendToTerminal(`Error: ${error.message}\n>>> `);
     isWaitingForResponse = false;
     lastSentCommand = ''; // Clear stored command on error
-    if (inputField) inputField.focus();
+    isMultiLineMode = false;
+    multiLineBuffer = [];
+    currentIndentLevel = 0;
+    if (inputField) {
+      resetInputPlaceholder();
+      inputField.focus();
+    }
   }
 }
 
@@ -498,13 +796,16 @@ function initializeTerminal() {
   isWaitingForResponse = false;
   responseBuffer = '';
   lastSentCommand = '';
+  isMultiLineMode = false;
+  multiLineBuffer = [];
+  currentIndentLevel = 0;
 }
 
 // ESP32 Detection functionality
 esp32DetectButton.addEventListener("click", async () => {
-  // If already connected, don't allow reconnection
+  // If already connected, don't initiate connection - let dropdown handle operations
   if (currentESP32Device) {
-    showNotification("ESP32 already connected. Disconnect first to connect a new device.");
+    // Connection exists, dropdown should handle the click
     return;
   }
 
@@ -523,11 +824,9 @@ esp32DetectButton.addEventListener("click", async () => {
       const selectedDevice = await esp32Detector.selectDevice();
       currentESP32Device = selectedDevice;
 
-      // Update button text and make it non-clickable
+      // Update button text - keep it clickable for dropdown functionality
       const esp32DetectText = document.getElementById("esp32-detect-text");
-      esp32DetectText.textContent = `ESP32 (✓)`;
-      esp32DetectButton.style.pointerEvents = 'none';
-      esp32DetectButton.style.opacity = '0.6';
+      esp32DetectText.textContent = `ESP32`;
 
       // Show dropdown items (Flash, Erase, REPL) and change Connect to Disconnect
       esp32FlashButton.style.display = 'block';
@@ -537,6 +836,20 @@ esp32DetectButton.addEventListener("click", async () => {
       // Change Connect button to Disconnect
       esp32ConnectButton.innerHTML = '<i class="fa fa-unlink"></i> Disconnect';
       esp32ConnectButton.id = 'esp32-disconnect-button';
+
+      // Show the ESP32 dropdown arrow when device is connected
+      if (esp32DropdownArrow) {
+        esp32DropdownArrow.style.display = 'inline';
+      }
+      // Enable dropdown hover behavior (don't force content to always show)
+      if (esp32DropdownButton) {
+        esp32DropdownButton.classList.remove('dropdown-disabled');
+        esp32DropdownButton.classList.add('dropdown-enabled');
+      }
+      // Remove any forced display style from dropdown content to let CSS hover handle it
+      if (esp32DropdownContent) {
+        esp32DropdownContent.style.display = '';
+      }
 
       // Log device info to device terminal
       deviceTerminal.value += `\nESP32 Device Selected:\n`;
@@ -607,14 +920,28 @@ esp32FlashButton.addEventListener("click", async () => {
 
     showNotification("MicroPython firmware flashed successfully!");
 
+    // Close REPL connection if open before resetting
+    await closeAndCleanupREPL('Device flashed and disconnected.\nConnect to ESP32 and open REPL to start a new session.\n');
+
     // Reset connection state after successful flash
     currentESP32Device = null;
     const esp32DetectText = document.getElementById("esp32-detect-text");
     esp32DetectText.textContent = "ESP32";
 
-    // Make ESP32 button clickable again
-    esp32DetectButton.style.pointerEvents = 'auto';
-    esp32DetectButton.style.opacity = '1';
+    // ESP32 button remains clickable (no need to restore since it was never disabled)
+
+    // Hide the ESP32 dropdown arrow and content after flash
+    if (esp32DropdownArrow) {
+      esp32DropdownArrow.style.display = 'none';
+    }
+    if (esp32DropdownContent) {
+      esp32DropdownContent.style.display = 'none';
+    }
+    // Disable dropdown hover behavior
+    if (esp32DropdownButton) {
+      esp32DropdownButton.classList.add('dropdown-disabled');
+      esp32DropdownButton.classList.remove('dropdown-enabled');
+    }
 
     esp32FlashButton.style.display = 'none';
     esp32EraseButton.style.display = 'none';
@@ -623,6 +950,9 @@ esp32FlashButton.addEventListener("click", async () => {
 
   } catch (error) {
     console.error("Firmware flashing error:", error);
+
+    // Clean up REPL on flash error too
+    await closeAndCleanupREPL('Flash failed. Device may be disconnected.\nConnect to ESP32 and open REPL to start a new session.\n');
 
     deviceTerminal.value += `\n❌ Firmware flashing failed: ${error.message}\n`;
     deviceTerminal.value += `Make sure ESP32 is in download mode (hold BOOT button while connecting).\n\n`;
@@ -666,14 +996,28 @@ esp32EraseButton.addEventListener("click", async () => {
 
     showNotification("ESP32 flash erased successfully!");
 
+    // Close REPL connection if open before resetting
+    await closeAndCleanupREPL('Device erased and disconnected.\nConnect to ESP32 and open REPL to start a new session.\n');
+
     // Reset connection state after successful erase
     currentESP32Device = null;
     const esp32DetectText = document.getElementById("esp32-detect-text");
     esp32DetectText.textContent = "ESP32";
 
-    // Make ESP32 button clickable again
-    esp32DetectButton.style.pointerEvents = 'auto';
-    esp32DetectButton.style.opacity = '1';
+    // ESP32 button remains clickable (no need to restore since it was never disabled)
+
+    // Hide the ESP32 dropdown arrow and content after erase
+    if (esp32DropdownArrow) {
+      esp32DropdownArrow.style.display = 'none';
+    }
+    if (esp32DropdownContent) {
+      esp32DropdownContent.style.display = 'none';
+    }
+    // Disable dropdown hover behavior
+    if (esp32DropdownButton) {
+      esp32DropdownButton.classList.add('dropdown-disabled');
+      esp32DropdownButton.classList.remove('dropdown-enabled');
+    }
 
     esp32FlashButton.style.display = 'none';
     esp32EraseButton.style.display = 'none';
@@ -682,6 +1026,9 @@ esp32EraseButton.addEventListener("click", async () => {
 
   } catch (error) {
     console.error("Flash erase error:", error);
+
+    // Clean up REPL on erase error too
+    await closeAndCleanupREPL('Erase failed. Device may be disconnected.\nConnect to ESP32 and open REPL to start a new session.\n');
 
     deviceTerminal.value += `\n❌ Flash erase failed: ${error.message}\n`;
     deviceTerminal.value += `Make sure ESP32 is in download mode (hold BOOT button while connecting).\n\n`;
@@ -697,9 +1044,7 @@ esp32ConnectButton.addEventListener("click", async () => {
     // Disconnect mode
     try {
       // Close REPL connection if open
-      if (esp32REPL.isREPLConnected()) {
-        await esp32REPL.closeREPL();
-      }
+      await closeAndCleanupREPL();
 
       // Close the port if it's open
       if (currentESP32Device.port && currentESP32Device.port.readable) {
@@ -710,9 +1055,7 @@ esp32ConnectButton.addEventListener("click", async () => {
       const esp32DetectText = document.getElementById("esp32-detect-text");
       esp32DetectText.textContent = "ESP32";
 
-      // Make ESP32 button clickable again
-      esp32DetectButton.style.pointerEvents = 'auto';
-      esp32DetectButton.style.opacity = '1';
+      // ESP32 button remains clickable (no need to restore since it was never disabled)
 
       // Hide dropdown items
       esp32FlashButton.style.display = 'none';
@@ -726,6 +1069,19 @@ esp32ConnectButton.addEventListener("click", async () => {
       // Clear device reference
       currentESP32Device = null;
 
+      // Hide the ESP32 dropdown arrow and content when device is disconnected
+      if (esp32DropdownArrow) {
+        esp32DropdownArrow.style.display = 'none';
+      }
+      if (esp32DropdownContent) {
+        esp32DropdownContent.style.display = 'none';
+      }
+      // Disable dropdown hover behavior
+      if (esp32DropdownButton) {
+        esp32DropdownButton.classList.add('dropdown-disabled');
+        esp32DropdownButton.classList.remove('dropdown-enabled');
+      }
+
       // Log disconnect to device terminal
       deviceTerminal.value += `\nESP32 Device Disconnected\n`;
       deviceTerminal.value += `Status: Disconnected\n\n`;
@@ -738,6 +1094,8 @@ esp32ConnectButton.addEventListener("click", async () => {
 
     } catch (error) {
       console.error("Disconnect error:", error);
+      // Try to clean up REPL even if disconnect fails
+      await closeAndCleanupREPL('Disconnect error occurred. REPL may be in unstable state.\nConnect to ESP32 and open REPL to start a new session.\n');
       showNotification(`Disconnect failed: ${error.message}`);
     }
   } else {
@@ -769,6 +1127,13 @@ esp32ReplButton.addEventListener("click", async () => {
     esp32REPL.onDataReceived = (data) => {
       // Handle initial boot messages (before first prompt)
       if (!isWaitingForResponse) {
+        appendToTerminal(data);
+        return;
+      }
+
+      // In multi-line mode, show ESP32's natural output
+      if (isMultiLineMode) {
+        // Show everything from ESP32 during multi-line mode
         appendToTerminal(data);
         return;
       }
@@ -806,6 +1171,7 @@ esp32ReplButton.addEventListener("click", async () => {
 
         // Focus input field
         if (inputField) {
+          resetInputPlaceholder();
           inputField.focus();
         }
       }
@@ -914,4 +1280,16 @@ document.addEventListener("DOMContentLoaded", () => {
   makeUneditable(editable);
   notification.style.transition = "opacity 0.5s ease-in-out";
   ws.resize();
+
+  // Ensure dropdown arrow is hidden on page load
+  if (esp32DropdownArrow) {
+    esp32DropdownArrow.style.display = 'none';
+  }
+  if (esp32DropdownContent) {
+    esp32DropdownContent.style.display = 'none';
+  }
+  if (esp32DropdownButton) {
+    esp32DropdownButton.classList.add('dropdown-disabled');
+    esp32DropdownButton.classList.remove('dropdown-enabled');
+  }
 });

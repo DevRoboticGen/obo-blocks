@@ -256,6 +256,17 @@ div:nth-of-type(2)::-webkit-resizer {
   /* overflow-y: auto; */
 }
 
+/* Output section button row - horizontal layout for tabs and buttons */
+.output .button-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
 .output-title {
   margin: 1rem;
   font-weight: 500;
@@ -264,8 +275,8 @@ div:nth-of-type(2)::-webkit-resizer {
 /* Output Tabs Styles */
 .output-tabs {
   display: flex;
-  border-bottom: 1px solid #e0e0e0;
-  margin-bottom: 0.5rem;
+  border-bottom: none;
+  margin-bottom: 0;
 }
 
 .tab-button {
@@ -289,7 +300,7 @@ div:nth-of-type(2)::-webkit-resizer {
 
 .tab-button.active {
   color: #1a3a59ec;
-  border-bottom-color: #1a3a59ec;
+  border-bottom: 2px solid #1a3a59ec;
   font-weight: 500;
 }
 
@@ -390,8 +401,19 @@ div:nth-of-type(2)::-webkit-resizer {
   overflow: hidden;
 }
 
+/* Default dropdown hover behavior for all dropdowns */
 .dropdown-button:hover .dropdown-content {
   display: block;
+}
+
+/* ESP32 specific dropdown behavior - only when enabled */
+.dropdown-button.dropdown-enabled:hover .dropdown-content {
+  display: block !important;
+}
+
+/* Ensure ESP32 dropdown stays hidden when disabled */
+.dropdown-button.dropdown-disabled .dropdown-content {
+  display: none !important;
 }
 
 .dropdown-item {
@@ -565,29 +587,7 @@ body {
   --warning-foreground: #111827;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --fg: #e5e7eb;
-    --bg: #0b1220;
-    --muted: #94a3b8;
-    --border: #1f2937;
-
-    --primary: #3b82f6;
-    --primary-foreground: #0b1220;
-
-    --secondary: #0b1220;
-    --secondary-foreground: #e5e7eb;
-
-    --destructive: #f43f5e;
-    --destructive-foreground: #0b1220;
-
-    /* Dark scheme semantics */
-    --success: #22c55e;
-    --success-foreground: #0b1220;
-    --warning: #f59e0b;
-    --warning-foreground: #0b1220;
-  }
-}
+/* Dark mode disabled - maintaining consistent light theme for buttons */
 
 /* Base */
 .button.btn,
@@ -679,11 +679,7 @@ body {
   background: rgba(15, 23, 42, 0.05);
 }
 
-@media (prefers-color-scheme: dark) {
-  .btn-outline:hover {
-    background: rgba(255, 255, 255, 0.06);
-  }
-}
+/* Dark mode outline hover effect removed */
 
 .btn-ghost {
   --btn-bg: transparent;
@@ -694,11 +690,7 @@ body {
   background: rgba(15, 23, 42, 0.06);
 }
 
-@media (prefers-color-scheme: dark) {
-  .btn-ghost:hover {
-    background: rgba(255, 255, 255, 0.06);
-  }
-}
+/* Dark mode ghost hover effect removed */
 
 .btn-destructive {
   --btn-bg: var(--destructive);
