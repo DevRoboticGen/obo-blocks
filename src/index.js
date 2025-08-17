@@ -54,6 +54,13 @@ const esp32DetectButton = document.getElementById("esp32-detect-button");
 const importJsonButton = document.getElementById("import-json-button");
 const exportJsonButton = document.getElementById("export-json-button");
 const collapseToggleButton = document.getElementById("collapse-toggle-button");
+
+// Output tabs
+const pythonOutputTab = document.getElementById("python-output-tab");
+const deviceOutputTab = document.getElementById("device-output-tab");
+const pythonOutputPanel = document.getElementById("python-output-panel");
+const deviceOutputPanel = document.getElementById("device-output-panel");
+const deviceTerminal = document.getElementById("device-terminal-output");
 const collapseToggleText = document.getElementById("collapse-toggle-text");
 const collapseToggleIcon = document.getElementById("collapse-toggle-icon");
 const navCollapseToggleButton = document.getElementById("nav-collapse-toggle-button");
@@ -246,7 +253,12 @@ runcodeButton.addEventListener("click", () => {
 });
 
 clearButton.addEventListener("click", () => {
-  terminal.innerHTML = "Python 3.10 \n>>> ";
+  // Clear the active terminal
+  if (pythonOutputPanel.classList.contains('active')) {
+    terminal.value = "Python 3.10 \n>>> ";
+  } else if (deviceOutputPanel.classList.contains('active')) {
+    deviceTerminal.value = "";
+  }
   showNotification("Terminal cleared");
 });
 
@@ -263,6 +275,26 @@ exportButton.addEventListener("click", () => {
   saveAsPythonFile(content);
   showNotification("Code exported as script.py");
 });
+
+// Tab switching functionality
+function switchTab(tabName) {
+  // Remove active class from all tabs and panels
+  document.querySelectorAll('.tab-button').forEach(tab => tab.classList.remove('active'));
+  document.querySelectorAll('.output-panel').forEach(panel => panel.classList.remove('active'));
+
+  // Add active class to selected tab and panel
+  if (tabName === 'python-output') {
+    pythonOutputTab.classList.add('active');
+    pythonOutputPanel.classList.add('active');
+  } else if (tabName === 'device-output') {
+    deviceOutputTab.classList.add('active');
+    deviceOutputPanel.classList.add('active');
+  }
+}
+
+// Tab event listeners
+pythonOutputTab.addEventListener("click", () => switchTab('python-output'));
+deviceOutputTab.addEventListener("click", () => switchTab('device-output'));
 
 // ESP32 Detection functionality
 esp32DetectButton.addEventListener("click", async () => {
@@ -283,15 +315,18 @@ esp32DetectButton.addEventListener("click", async () => {
 
       // Update button text
       const esp32DetectText = document.getElementById("esp32-detect-text");
-      esp32DetectText.textContent = `ESP32: ${selectedDevice.name}`;
+      esp32DetectText.textContent = `ESP32 (✓)`;
 
-      // Log device info to terminal
-      terminal.value += `\nESP32 Device Selected:\n`;
-      terminal.value += `Name: ${selectedDevice.name}\n`;
-      terminal.value += `Vendor ID: 0x${selectedDevice.usbVendorId?.toString(16).toUpperCase()}\n`;
-      terminal.value += `Product ID: 0x${selectedDevice.usbProductId?.toString(16).toUpperCase()}\n`;
-      terminal.value += `Status: Connected\n\n`;
-      terminal.scrollTop = terminal.scrollHeight;
+      // Log device info to device terminal
+      deviceTerminal.value += `\nESP32 Device Selected:\n`;
+      deviceTerminal.value += `Name: ${selectedDevice.name}\n`;
+      deviceTerminal.value += `Vendor ID: 0x${selectedDevice.usbVendorId?.toString(16).toUpperCase()}\n`;
+      deviceTerminal.value += `Product ID: 0x${selectedDevice.usbProductId?.toString(16).toUpperCase()}\n`;
+      deviceTerminal.value += `Status: Connected\n\n`;
+      deviceTerminal.scrollTop = deviceTerminal.scrollHeight;
+
+      // Switch to device output tab
+      switchTab('device-output');
 
       showNotification(`ESP32 device connected: ${selectedDevice.name}`);
     } catch (error) {
@@ -300,14 +335,16 @@ esp32DetectButton.addEventListener("click", async () => {
       } else {
         showNotification(`Error: ${error.message}`);
       }
-      terminal.value += `\nESP32 Detection Error: ${error.message}\n\n`;
-      terminal.scrollTop = terminal.scrollHeight;
+      deviceTerminal.value += `\nESP32 Detection Error: ${error.message}\n\n`;
+      deviceTerminal.scrollTop = deviceTerminal.scrollHeight;
+      switchTab('device-output');
     }
   } catch (error) {
     console.error("ESP32 detection error:", error);
     showNotification(`ESP32 detection failed: ${error.message}`);
-    terminal.value += `\nESP32 Detection Error: ${error.message}\n\n`;
-    terminal.scrollTop = terminal.scrollHeight;
+    deviceTerminal.value += `\nESP32 Detection Error: ${error.message}\n\n`;
+    deviceTerminal.scrollTop = deviceTerminal.scrollHeight;
+    switchTab('device-output');
   }
 });
 
