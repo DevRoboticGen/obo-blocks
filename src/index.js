@@ -57,7 +57,9 @@ const runButtonText = document.getElementById("run-text");
 const editbuttonText = document.getElementById("edit-text");
 const codeDiv = document.getElementById("code");
 const outputDiv = document.getElementById("output");
-let containerRoot = document.querySelector(".container") || document.querySelector(".container-editing");
+function getContainerRoot() {
+  return document.querySelector(".container") || document.querySelector(".container-editing");
+}
 
 // ------------------- Event Listners -----------------------------
 // obo_blocks_logo.src = oboBlocksLogo
@@ -291,7 +293,7 @@ exportJsonButton.addEventListener("click", () => {
 });
 
 collapseToggleButton.addEventListener("click", () => {
-  if (!ws || !blocklyEditorPanel || !containerRoot) return;
+  if (!ws || !blocklyEditorPanel || !getContainerRoot()) return;
   const panelCurrentlyVisible = blocklyEditorPanel.style.display !== "none";
   const blocks = ws.getAllBlocks(false);
 
@@ -303,7 +305,7 @@ collapseToggleButton.addEventListener("click", () => {
         block.setCollapsed(true);
       }
       blocklyEditorPanel.style.display = "none";
-      containerRoot.className = "container-editing";
+      getContainerRoot().className = "container-editing";
       collapseToggleText.textContent = "Expand";
       collapseToggleIcon.classList.remove("fa-compress");
       collapseToggleIcon.classList.add("fa-expand");
@@ -316,7 +318,7 @@ collapseToggleButton.addEventListener("click", () => {
       showNotification("Collapsed Visual Blocks");
     } else {
       // Show panel again and expand all blocks
-      containerRoot.className = "container";
+      getContainerRoot().className = "container";
       blocklyEditorPanel.style.display = "flex";
       for (const block of blocks) {
         block.setCollapsed(false);
