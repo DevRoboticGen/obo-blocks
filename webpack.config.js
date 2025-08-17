@@ -19,9 +19,9 @@ module.exports = {
     },
     optimization: {
         splitChunks: {
-          chunks: 'all',
+            chunks: 'all',
         },
-      },
+    },
     devtool: 'source-map',
     devServer: {
         static:
@@ -64,10 +64,11 @@ module.exports = {
         new CopyWebpackPlugin({
             patterns: [
                 { from: "src/assets/blockly_media", to: "media" }, // Adjust source and destination paths as needed
-                { from: "src/SEO", to: ""},
-                { from: "src/assets/academyLogo.webp", to: ""},
-                { from: "src/assets/obo_blocks.webp", to: ""},
-                { from: "src/assets/editing.gif",to: "" },
+                { from: "src/SEO", to: "" },
+                { from: "src/assets/academyLogo.webp", to: "" },
+                { from: "src/assets/obo_blocks.webp", to: "" },
+                { from: "src/assets/editing.gif", to: "" },
+                { from: "src/assets/firmware", to: "firmware" }, // Copy firmware files
             ]
         }),
         new MiniCssExtractPlugin({

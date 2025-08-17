@@ -28,14 +28,16 @@ import { worker, terminal, stopWorker } from "./pyodide/loader";
 import { createPinButtonCallback, createADCButtonCallback, createPWMButtonCallback, createI2CButtonCallback } from "./micropython/callback";
 import { pinCategoryFlyout, adcCategoryFlyout, pwmCategoryFlyout, i2cCategoryFlyout } from "./micropython/flyouts";
 
-// ESP32 Detection
+// ESP32 Detection and Flashing
 import ESP32Detector from "./esp32/detection";
+import ESP32Flasher from "./esp32/flash";
 
 let editable = false;
 let ws;
 
-// ESP32 Detection
+// ESP32 Detection and Flashing
 const esp32Detector = new ESP32Detector();
+const esp32Flasher = new ESP32Flasher();
 let currentESP32Device = null;
 
 // ------------------ Elements -------------------------
@@ -51,6 +53,7 @@ const clearButton = document.getElementById("clear-button");
 const stopButton = document.getElementById("stop-button");
 const exportButton = document.getElementById("export-button");
 const esp32DetectButton = document.getElementById("esp32-detect-button");
+const esp32FlashButton = document.getElementById("esp32-flash-button");
 const importJsonButton = document.getElementById("import-json-button");
 const exportJsonButton = document.getElementById("export-json-button");
 const collapseToggleButton = document.getElementById("collapse-toggle-button");
@@ -317,6 +320,9 @@ esp32DetectButton.addEventListener("click", async () => {
       const esp32DetectText = document.getElementById("esp32-detect-text");
       esp32DetectText.textContent = `ESP32 (✓)`;
 
+      // Show flash button
+      esp32FlashButton.style.display = 'flex';
+
       // Log device info to device terminal
       deviceTerminal.value += `\nESP32 Device Selected:\n`;
       deviceTerminal.value += `Name: ${selectedDevice.name}\n`;
@@ -345,6 +351,54 @@ esp32DetectButton.addEventListener("click", async () => {
     deviceTerminal.value += `\nESP32 Detection Error: ${error.message}\n\n`;
     deviceTerminal.scrollTop = deviceTerminal.scrollHeight;
     switchTab('device-output');
+  }
+});
+
+// ESP32 Flashing functionality
+esp32FlashButton.addEventListener("click", async () => {
+  if (!currentESP32Device) {
+    showNotification("No ESP32 device connected");
+    return;
+  }
+
+  try {
+    showNotification("Starting MicroPython firmware flash...");
+
+    // Switch to device output tab
+    switchTab('device-output');
+
+    // Get firmware info
+    const firmwareInfo = esp32Flasher.getFirmwareInfo();
+
+    deviceTerminal.value += `\nStarting MicroPython Firmware Flash:\n`;
+    deviceTerminal.value += `Version: ${firmwareInfo.version}\n`;
+    deviceTerminal.value += `Date: ${firmwareInfo.date}\n`;
+    deviceTerminal.value += `Source: Local firmware file\n\n`;
+    deviceTerminal.scrollTop = deviceTerminal.scrollHeight;
+
+    // Progress callback function
+    const updateProgress = (percentage, message) => {
+      deviceTerminal.value += `[${percentage}%] ${message}\n`;
+      deviceTerminal.scrollTop = deviceTerminal.scrollHeight;
+    };
+
+    // Flash the firmware
+    await esp32Flasher.flashFirmware(currentESP32Device, firmwareInfo, updateProgress);
+
+    deviceTerminal.value += `\n✅ MicroPython firmware flashed successfully!\n`;
+    deviceTerminal.value += `ESP32 is now ready for MicroPython development.\n\n`;
+    deviceTerminal.scrollTop = deviceTerminal.scrollHeight;
+
+    showNotification("MicroPython firmware flashed successfully!");
+
+  } catch (error) {
+    console.error("Firmware flashing error:", error);
+
+    deviceTerminal.value += `\n❌ Firmware flashing failed: ${error.message}\n`;
+    deviceTerminal.value += `Make sure ESP32 is in download mode (hold BOOT button while connecting).\n\n`;
+    deviceTerminal.scrollTop = deviceTerminal.scrollHeight;
+
+    showNotification(`Firmware flashing failed: ${error.message}`);
   }
 });
 
