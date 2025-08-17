@@ -28,8 +28,15 @@ import { worker, terminal, stopWorker } from "./pyodide/loader";
 import { createPinButtonCallback, createADCButtonCallback, createPWMButtonCallback, createI2CButtonCallback } from "./micropython/callback";
 import { pinCategoryFlyout, adcCategoryFlyout, pwmCategoryFlyout, i2cCategoryFlyout } from "./micropython/flyouts";
 
+// ESP32 Detection
+import ESP32Detector from "./esp32/detection";
+
 let editable = false;
 let ws;
+
+// ESP32 Detection
+const esp32Detector = new ESP32Detector();
+let currentESP32Device = null;
 
 // ------------------ Elements -------------------------
 
@@ -43,6 +50,7 @@ const runcodeButton = document.getElementById("run-button");
 const clearButton = document.getElementById("clear-button");
 const stopButton = document.getElementById("stop-button");
 const exportButton = document.getElementById("export-button");
+const esp32DetectButton = document.getElementById("esp32-detect-button");
 const importJsonButton = document.getElementById("import-json-button");
 const exportJsonButton = document.getElementById("export-json-button");
 const collapseToggleButton = document.getElementById("collapse-toggle-button");
@@ -254,6 +262,53 @@ exportButton.addEventListener("click", () => {
   }
   saveAsPythonFile(content);
   showNotification("Code exported as script.py");
+});
+
+// ESP32 Detection functionality
+esp32DetectButton.addEventListener("click", async () => {
+  try {
+    showNotification("Selecting ESP32 device...");
+
+    // Check browser compatibility first
+    const compatibility = esp32Detector.getCompatibilityInfo();
+    if (!compatibility.webSerialSupported) {
+      showNotification("Web Serial API not supported in this browser. Please use Chrome/Edge.");
+      return;
+    }
+
+    // Directly request device selection - simpler and more reliable
+    try {
+      const selectedDevice = await esp32Detector.selectDevice();
+      currentESP32Device = selectedDevice;
+
+      // Update button text
+      const esp32DetectText = document.getElementById("esp32-detect-text");
+      esp32DetectText.textContent = `ESP32: ${selectedDevice.name}`;
+
+      // Log device info to terminal
+      terminal.value += `\nESP32 Device Selected:\n`;
+      terminal.value += `Name: ${selectedDevice.name}\n`;
+      terminal.value += `Vendor ID: 0x${selectedDevice.usbVendorId?.toString(16).toUpperCase()}\n`;
+      terminal.value += `Product ID: 0x${selectedDevice.usbProductId?.toString(16).toUpperCase()}\n`;
+      terminal.value += `Status: Connected\n\n`;
+      terminal.scrollTop = terminal.scrollHeight;
+
+      showNotification(`ESP32 device connected: ${selectedDevice.name}`);
+    } catch (error) {
+      if (error.message === 'No port selected by user') {
+        showNotification("No device selected");
+      } else {
+        showNotification(`Error: ${error.message}`);
+      }
+      terminal.value += `\nESP32 Detection Error: ${error.message}\n\n`;
+      terminal.scrollTop = terminal.scrollHeight;
+    }
+  } catch (error) {
+    console.error("ESP32 detection error:", error);
+    showNotification(`ESP32 detection failed: ${error.message}`);
+    terminal.value += `\nESP32 Detection Error: ${error.message}\n\n`;
+    terminal.scrollTop = terminal.scrollHeight;
+  }
 });
 
 importJsonButton.addEventListener("click", () => {
