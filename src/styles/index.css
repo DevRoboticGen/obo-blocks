@@ -200,7 +200,6 @@ div:nth-of-type(2)::-webkit-resizer {
 
 .button-group a:hover:not(.btn) {
   background-color: #1a3a59ec;
-}
 
 .button-group button:hover {
   cursor: pointer;
