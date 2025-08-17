@@ -245,34 +245,32 @@ function initBlokly(workspace) {
   return workspace;
 }
 
-let totalSizeWindowSizw =
-  parseInt(codeDiv.getBoundingClientRect().height.toFixed(0)) +
-  parseInt(outputDiv.getBoundingClientRect().height.toFixed(0));
-let oldcodeSize = codeDiv.getBoundingClientRect().height.toFixed(0);
-let newoutputSize = outputDiv.getBoundingClientRect().height.toFixed(0);
+// ResizeObserver functions disabled - grid layout handles sizing automatically
+// let resizeTimeout;
+// let initialResizeCount = 0;
 
-function resizeRightColumn() {
-  let newcodeSize = codeDiv.getBoundingClientRect().height.toFixed(0);
-  if (
-    newcodeSize < 500 &&
-    newcodeSize > 300 &&
-    newcodeSize < totalSizeWindowSizw
-  ) {
-    let outputSize = totalSizeWindowSizw - newcodeSize; // Replace codeSize with newcodeSize
-    console.log("Output Size: ", totalSizeWindowSizw);
-    outputDiv.style.height = outputSize + "px";
-    oldcodeSize = newcodeSize;
-  }
-}
+// function debounceResize(callback, delay = 100) {
+//   return function () {
+//     clearTimeout(resizeTimeout);
+//     resizeTimeout = setTimeout(callback, delay);
+//   };
+// }
 
-if ("ResizeObserver" in window) {
-  // Create a new ResizeObserver
-  const resizeObserver = new ResizeObserver(resizeRightColumn);
-  // Start observing the element
-  resizeObserver.observe(codeDiv);
-} else {
-  console.log("Resize Observer not supported in this browser.");
-}
+// function resizeRightColumn() {
+//   // Grid layout now handles sizing automatically
+// }
+
+// Disable ResizeObserver temporarily to prevent slow animation during page load
+// The grid layout now handles sizing automatically
+// if ("ResizeObserver" in window) {
+//   const debouncedResize = debounceResize(resizeRightColumn, 100);
+//   const resizeObserver = new ResizeObserver((entries) => {
+//     requestAnimationFrame(() => {
+//       debouncedResize();
+//     });
+//   });
+//   resizeObserver.observe(codeDiv);
+// }
 // ------------------------ Initializations -----------------------------------------------------------
 
 ws = initBlokly(ws);
@@ -322,11 +320,10 @@ clearButton.addEventListener("click", () => {
   if (pythonOutputPanel.classList.contains('active')) {
     terminal.value = "Python 3.10 \n>>> ";
   } else if (deviceOutputPanel.classList.contains('active')) {
-    deviceTerminal.value = "";
+    deviceTerminal.value = "Connect ESP32 to view device information.";
   } else if (serialMonitorPanel.classList.contains('active')) {
     // Clear our state
     terminalContent = '';
-    serialTerminal.textContent = '';
     lastSentCommand = ''; // Clear stored command when clearing terminal
     isMultiLineMode = false; // Exit multi-line mode
     multiLineBuffer = [];
@@ -334,16 +331,17 @@ clearButton.addEventListener("click", () => {
     isWaitingForResponse = false;
     responseBuffer = '';
 
-    // Send Ctrl+C to reset ESP32 state if connected, otherwise just add prompt
+    // Send Ctrl+C to reset ESP32 state if connected, otherwise show initial message
     try {
       if (esp32REPL.isREPLConnected()) {
+        serialTerminal.textContent = '';
         esp32REPL.sendCommand('\x03'); // Ctrl+C - ESP32 will respond with its own prompt
       } else {
-        appendToTerminal('>>> '); // Only add prompt if not connected
+        serialTerminal.textContent = 'Connect ESP32 and open REPL for MicroPython.'; // Show initial message if not connected
       }
     } catch (error) {
       console.error("Error sending Ctrl+C:", error);
-      appendToTerminal('>>> '); // Fallback - add prompt if Ctrl+C fails
+      serialTerminal.textContent = 'Connect ESP32 and open REPL for MicroPython.'; // Fallback - show initial message if Ctrl+C fails
     }
 
     if (inputField) {
@@ -784,9 +782,7 @@ async function executeFullCommand(command) {
 
 function initializeTerminal() {
   terminalContent = '';
-  appendToTerminal('MicroPython REPL Terminal\n');
-  appendToTerminal('Type "help()" for more information.\n');
-  appendToTerminal('\n');
+  appendToTerminal('Connect ESP32 and open REPL for MicroPython.\n');
   appendToTerminal('>>> ');
 
   // Create input field if it doesn't exist
@@ -1280,6 +1276,12 @@ document.addEventListener("DOMContentLoaded", () => {
   makeUneditable(editable);
   notification.style.transition = "opacity 0.5s ease-in-out";
   ws.resize();
+
+  // Initialize device terminal with welcome message
+  deviceTerminal.value = "Connect ESP32 to view device information.";
+
+  // Initialize serial terminal with welcome message
+  serialTerminal.textContent = "Connect ESP32 and open REPL for MicroPython.";
 
   // Ensure dropdown arrow is hidden on page load
   if (esp32DropdownArrow) {

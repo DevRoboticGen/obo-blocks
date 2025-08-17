@@ -1,3 +1,10 @@
+/* Universal box-sizing to prevent overflow issues */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 .notification {
   font-family: "Roboto", sans-serif;
   font-weight: 300;
@@ -144,10 +151,8 @@
   padding: 0.2rem;
   margin-right: 0.5rem;
   box-shadow: 2px 3px 18px 0px rgba(0, 0, 0, 0.34);
-  overflow-y: auto;
-  max-height: 70vh;
-  min-height: 10vh;
-  overflow-x: hidden;
+  overflow: hidden;
+  min-height: 300px;
   resize: vertical;
 }
 
@@ -229,9 +234,9 @@ div:nth-of-type(2)::-webkit-resizer {
   text-align: left;
   background-color: #f3f3f3;
   width: 100%;
-  height: 100%;
-  max-height: 35rem;
+  flex: 1;
   overflow-y: auto;
+  border-radius: 4px;
 }
 
 .python {
@@ -253,7 +258,10 @@ div:nth-of-type(2)::-webkit-resizer {
   box-shadow: 2px 3px 18px 0px rgba(0, 0, 0, 0.34);
   padding: 0.2rem;
   margin-right: 0.5rem;
-  /* overflow-y: auto; */
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Output section button row - horizontal layout for tabs and buttons */
@@ -261,10 +269,10 @@ div:nth-of-type(2)::-webkit-resizer {
   display: flex;
   flex-direction: row;
   justify-content: space-between;
-  align-items: center;
+  align-items: stretch;
   border-bottom: 1px solid #e0e0e0;
-  padding-bottom: 0.5rem;
   margin-bottom: 0.5rem;
+  min-height: 48px;
 }
 
 .output-title {
@@ -277,74 +285,101 @@ div:nth-of-type(2)::-webkit-resizer {
   display: flex;
   border-bottom: none;
   margin-bottom: 0;
+  height: 100%;
+  align-items: stretch;
 }
 
 .tab-button {
   background: none;
   border: none;
-  padding: 0.5rem 1rem;
+  padding: 0.75rem 1.25rem;
   cursor: pointer;
   font-size: 0.9rem;
   color: #666;
-  border-bottom: 2px solid transparent;
+  border-bottom: 3px solid transparent;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
-  gap: 0.3rem;
+  justify-content: center;
+  gap: 0.4rem;
+  min-width: 140px;
+  height: 100%;
+  position: relative;
+  white-space: nowrap;
 }
 
 .tab-button:hover {
   color: #333;
-  background-color: #f5f5f5;
+  background-color: #f8f9fa;
 }
 
 .tab-button.active {
   color: #1a3a59ec;
-  border-bottom: 2px solid #1a3a59ec;
+  border-bottom: 3px solid #1a3a59ec;
   font-weight: 500;
+  background-color: #fff;
 }
 
 .output-panel {
   display: none;
-  height: 100%;
-  min-height: 300px;
+  height: calc(100% - 48px);
+  min-height: 200px;
+  max-height: calc(100vh - 200px);
+  padding: 0.5rem;
+  overflow: hidden;
+  width: 100%;
 }
 
 .output-panel.active {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  height: calc(100% - 48px);
+  min-height: 200px;
+  max-height: calc(100vh - 200px);
+  overflow: hidden;
+  width: 100%;
+}
+
+/* Output section button group alignment */
+.output .button-group {
+  display: flex;
+  align-items: center;
   height: 100%;
-  min-height: 300px;
+  gap: 0.5rem;
 }
 
 /* Serial Monitor Styles */
 .serial-monitor-container {
   display: flex;
   flex-direction: column;
+  flex: 1;
   height: 100%;
-  min-height: 300px;
-  margin-left: 1rem;
-  width: 95%;
+  min-height: 180px;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .serial-terminal {
   flex: 1;
-  background-color: #ffffff;
-  border: 1px solid #333;
+  background-color: #fafafa;
+  border: 1px solid #ddd;
   border-radius: 4px;
-  padding: 10px;
+  padding: 0.75rem;
   font-family: 'Courier New', monospace;
   font-size: 14px;
   line-height: 1.4;
   color: #000000;
-  overflow-y: scroll;
+  overflow-y: auto;
   overflow-x: hidden;
   white-space: pre-wrap;
   word-wrap: break-word;
-  height: 300px;
-  max-height: 300px;
+  min-height: 150px;
   outline: none;
   caret-color: #000000;
   position: relative;
+  width: 100%;
+  max-width: 100%;
 }
 
 .serial-terminal:focus {
@@ -451,23 +486,60 @@ div:nth-of-type(2)::-webkit-resizer {
 }
 
 .terminal-output-div {
-  overflow-y: auto;
-  resize: vertical;
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100%;
 }
 
 .terminal-output {
-  margin-left: 1rem;
-  color: #9d9d9d;
-  width: 95%;
+  color: #333;
+  width: 100%;
+  max-width: 100%;
+  flex: 1;
   overflow-y: auto;
-  resize: vertical;
-  border: none;
+  overflow-x: hidden;
+  resize: none;
+  border: 1px solid #ddd;
+  padding: 0.75rem;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.4;
+  background-color: #fafafa;
+  border-radius: 4px;
+  min-height: 150px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
 }
 
 .terminal-output:focus {
-  border: 0 none #fff;
-  overflow: hidden;
   outline: none;
+  border-color: var(--primary);
+}
+
+/* Consistent scrollbar styling for all terminal outputs */
+.terminal-output::-webkit-scrollbar,
+.serial-terminal::-webkit-scrollbar {
+  width: 8px;
+}
+
+.terminal-output::-webkit-scrollbar-track,
+.serial-terminal::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.terminal-output::-webkit-scrollbar-thumb,
+.serial-terminal::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.terminal-output::-webkit-scrollbar-thumb:hover,
+.serial-terminal::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
 }
 
 #clear-button:hover:not(.btn) {
@@ -479,13 +551,14 @@ div:nth-of-type(2)::-webkit-resizer {
   font-family: "Roboto", sans-serif;
   font-weight: 300;
   font-style: normal;
-  grid-template-rows: 1fr 8fr 3fr;
+  grid-template-rows: 60px 3fr 2fr;
   grid-template-areas:
     "navBar navBar navBar navBar"
     "editor editor editor code"
     "editor editor editor output";
   grid-gap: 0.5rem;
-  height: calc(100vh - 0.5rem);
+  height: 100vh;
+  overflow: hidden;
 }
 
 .container-editing {
@@ -493,13 +566,14 @@ div:nth-of-type(2)::-webkit-resizer {
   font-family: "Roboto", sans-serif;
   font-weight: 300;
   font-style: normal;
-  grid-template-rows: 1fr 8fr 3fr;
+  grid-template-rows: 60px 3fr 2fr;
   grid-template-areas:
     "navBar navBar navBar navBar"
     "code code code code"
     "output output output output";
   grid-gap: 0.5rem;
-  height: calc(100vh - 0.5rem);
+  height: 100vh;
+  overflow: hidden;
 }
 
 body {
