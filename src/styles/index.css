@@ -317,14 +317,14 @@ div:nth-of-type(2)::-webkit-resizer {
 
 .serial-terminal {
   flex: 1;
-  background-color: #1e1e1e;
+  background-color: #ffffff;
   border: 1px solid #333;
   border-radius: 4px;
   padding: 10px;
   font-family: 'Courier New', monospace;
   font-size: 14px;
   line-height: 1.4;
-  color: #ffffff;
+  color: #000000;
   overflow-y: scroll;
   overflow-x: hidden;
   white-space: pre-wrap;
@@ -332,7 +332,7 @@ div:nth-of-type(2)::-webkit-resizer {
   height: 300px;
   max-height: 300px;
   outline: none;
-  caret-color: #ffffff;
+  caret-color: #000000;
   position: relative;
 }
 
@@ -343,26 +343,26 @@ div:nth-of-type(2)::-webkit-resizer {
 
 /* Terminal prompt styling */
 .serial-terminal .prompt {
-  color: #00ff00;
+  color: #0066cc;
   font-weight: bold;
 }
 
 .serial-terminal .command {
-  color: #ffffff;
+  color: #000000;
 }
 
 .serial-terminal .output {
-  color: #cccccc;
+  color: #333333;
   white-space: pre-wrap;
   word-wrap: break-word;
 }
 
 .serial-terminal .error {
-  color: #ff4444;
+  color: #cc0000;
 }
 
 .serial-terminal .welcome {
-  color: #8888ff;
+  color: #006600;
 }
 
 /* Ensure proper text wrapping for long lines */

@@ -276,7 +276,14 @@ clearButton.addEventListener("click", () => {
   } else if (deviceOutputPanel.classList.contains('active')) {
     deviceTerminal.value = "";
   } else if (serialMonitorPanel.classList.contains('active')) {
-    initializeTerminal();
+    terminalContent = '';
+    serialTerminal.textContent = '';
+    appendToTerminal('>>> ');
+    lastSentCommand = ''; // Clear stored command when clearing terminal
+    if (inputField) {
+      inputField.value = '';
+      inputField.focus();
+    }
   }
   showNotification("Terminal cleared");
 });
@@ -319,64 +326,78 @@ pythonOutputTab.addEventListener("click", () => switchTab('python-output'));
 deviceOutputTab.addEventListener("click", () => switchTab('device-output'));
 serialMonitorTab.addEventListener("click", () => switchTab('serial-monitor'));
 
-// Terminal functionality
+// Terminal functionality - Simplified approach
 let commandHistory = [];
 let historyIndex = -1;
-let currentCommand = '';
 let isWaitingForResponse = false;
 let responseBuffer = '';
+let terminalContent = '';
+let currentLine = '';
+let lastSentCommand = '';
 
-serialTerminal.addEventListener("keydown", async (event) => {
-  if (event.key === "Enter") {
-    event.preventDefault();
-    await executeCommand();
-  } else if (event.key === "ArrowUp") {
-    event.preventDefault();
-    navigateHistory(-1);
-  } else if (event.key === "ArrowDown") {
-    event.preventDefault();
-    navigateHistory(1);
-  } else if (event.key === "Backspace") {
-    // Prevent backspace from deleting the prompt
-    const selection = window.getSelection();
-    if (selection.rangeCount > 0) {
-      const range = selection.getRangeAt(0);
-      const promptNode = findPromptNode(range.startContainer);
-      if (promptNode && range.startOffset <= promptNode.textContent.length) {
-        event.preventDefault();
-        return;
-      }
+// Convert contentEditable to textarea for simpler management
+serialTerminal.contentEditable = false;
+serialTerminal.style.whiteSpace = 'pre-wrap';
+serialTerminal.style.fontFamily = 'monospace';
+serialTerminal.style.fontSize = '14px';
+serialTerminal.style.color = '#00ff00';
+serialTerminal.style.backgroundColor = '#000';
+serialTerminal.style.padding = '10px';
+serialTerminal.style.overflowY = 'scroll';
+
+let inputField = null;
+
+// Create input field for command entry
+function createInputField() {
+  if (inputField) return;
+
+  inputField = document.createElement('input');
+  inputField.type = 'text';
+  inputField.style.position = 'absolute';
+  inputField.style.bottom = '10px';
+  inputField.style.left = '10px';
+  inputField.style.right = '10px';
+  inputField.style.height = '30px';
+  inputField.style.backgroundColor = '#000';
+  inputField.style.color = '#00ff00';
+  inputField.style.border = '1px solid #00ff00';
+  inputField.style.fontFamily = 'monospace';
+  inputField.style.fontSize = '14px';
+  inputField.style.padding = '5px';
+  inputField.placeholder = 'Enter MicroPython command...';
+
+  // Position terminal container relatively
+  serialTerminal.parentElement.style.position = 'relative';
+  serialTerminal.style.paddingBottom = '50px';
+
+  serialTerminal.parentElement.appendChild(inputField);
+
+  inputField.addEventListener("keydown", async (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      await executeCommand();
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      navigateHistory(-1);
+    } else if (event.key === "ArrowDown") {
+      event.preventDefault();
+      navigateHistory(1);
     }
-  }
-});
+  });
 
-// Prevent paste of formatted text
-serialTerminal.addEventListener("paste", (event) => {
-  event.preventDefault();
-  const text = event.clipboardData.getData("text/plain");
-  document.execCommand("insertText", false, text);
-});
-
-// Focus terminal when clicked
-serialTerminal.addEventListener("click", () => {
-  serialTerminal.focus();
-  // Ensure scroll to bottom when clicked
-  serialTerminal.scrollTop = serialTerminal.scrollHeight;
-});
-
-// Terminal helper functions
-function findPromptNode(node) {
-  while (node && node.nodeType !== Node.TEXT_NODE) {
-    node = node.firstChild;
-  }
-  if (node && node.textContent.includes('>>>')) {
-    return node;
-  }
-  return null;
+  inputField.focus();
 }
 
+// Focus input field when terminal is clicked
+serialTerminal.addEventListener("click", () => {
+  if (inputField) {
+    inputField.focus();
+  }
+});
+
+// Simplified terminal helper functions
 function navigateHistory(direction) {
-  if (commandHistory.length === 0) return;
+  if (commandHistory.length === 0 || !inputField) return;
 
   if (direction === -1 && historyIndex < commandHistory.length - 1) {
     historyIndex++;
@@ -384,99 +405,45 @@ function navigateHistory(direction) {
     historyIndex--;
   } else if (direction === 1 && historyIndex === 0) {
     historyIndex = -1;
-    replaceCurrentLine('');
+    inputField.value = '';
     return;
   }
 
   if (historyIndex >= 0) {
-    replaceCurrentLine(commandHistory[commandHistory.length - 1 - historyIndex]);
+    inputField.value = commandHistory[commandHistory.length - 1 - historyIndex];
   }
 }
 
-function replaceCurrentLine(text) {
-  const selection = window.getSelection();
-  if (selection.rangeCount > 0) {
-    const range = selection.getRangeAt(0);
-    const promptNode = findPromptNode(range.startContainer);
-    if (promptNode) {
-      const promptText = promptNode.textContent;
-      const promptEnd = promptText.lastIndexOf('>>>') + 3;
-      const newText = promptText.substring(0, promptEnd) + ' ' + text;
-      promptNode.textContent = newText;
-
-      // Set cursor at end
-      const newRange = document.createRange();
-      newRange.setStart(promptNode, 1);
-      newRange.setEnd(promptNode, 1);
-      newRange.collapse(false);
-      selection.removeAllRanges();
-      selection.addRange(newRange);
-    }
-  }
+function appendToTerminal(text) {
+  terminalContent += text;
+  serialTerminal.textContent = terminalContent;
+  scrollToBottom();
 }
 
-function appendToTerminal(text, className = '') {
-  const span = document.createElement('span');
-  if (className) span.className = className;
-  span.textContent = text;
-  serialTerminal.appendChild(span);
-
-  // Force scroll to bottom
-  setTimeout(() => {
-    serialTerminal.scrollTop = serialTerminal.scrollHeight;
-  }, 0);
-}
-
-function appendOutput(text) {
-  // Create a separate output span
-  const outputSpan = document.createElement('span');
-  outputSpan.className = 'output';
-  outputSpan.textContent = text;
-  serialTerminal.appendChild(outputSpan);
-
-  // Force scroll to bottom
+function scrollToBottom() {
   setTimeout(() => {
     serialTerminal.scrollTop = serialTerminal.scrollHeight;
   }, 0);
 }
 
 function getCurrentCommand() {
-  const selection = window.getSelection();
-  if (selection.rangeCount > 0) {
-    const range = selection.getRangeAt(0);
-    const promptNode = findPromptNode(range.startContainer);
-    if (promptNode) {
-      const promptText = promptNode.textContent;
-      const promptEnd = promptText.lastIndexOf('>>>') + 3;
-      return promptText.substring(promptEnd).trim();
-    }
-  }
-  return '';
+  return inputField ? inputField.value.trim() : '';
 }
 
-function addPrompt() {
-  appendToTerminal('\n>>> ', 'prompt');
-  serialTerminal.focus();
-
-  // Set cursor at end
-  const selection = window.getSelection();
-  const range = document.createRange();
-  range.selectNodeContents(serialTerminal);
-  range.collapse(false);
-  selection.removeAllRanges();
-  selection.addRange(range);
+function clearInput() {
+  if (inputField) {
+    inputField.value = '';
+  }
 }
 
 async function executeCommand() {
   const command = getCurrentCommand();
   if (!command) {
-    addPrompt();
     return;
   }
 
   if (!esp32REPL.isREPLConnected()) {
-    appendToTerminal('Error: REPL not connected\n', 'error');
-    addPrompt();
+    appendToTerminal('Error: REPL not connected\n');
     return;
   }
 
@@ -486,46 +453,61 @@ async function executeCommand() {
   }
   historyIndex = -1;
 
-  // Set waiting flag
+  // Show the command with prompt first
+  appendToTerminal(`${command}\n`);
+  clearInput();
   isWaitingForResponse = true;
   responseBuffer = '';
+  lastSentCommand = command; // Store the command for filtering
 
   try {
     // Send command to ESP32
     await esp32REPL.sendCommand(command + '\n');
 
-    // Set a timeout to add prompt if no response received
+    // Set a timeout if no response received
     setTimeout(() => {
       if (isWaitingForResponse) {
-        appendToTerminal('\n>>> ', 'prompt');
+        appendToTerminal('\n>>> '); // Ready for next command
         isWaitingForResponse = false;
         responseBuffer = '';
-        serialTerminal.focus();
+        lastSentCommand = ''; // Clear stored command on timeout
+        if (inputField) inputField.focus();
       }
     }, 2000); // 2 second timeout
 
   } catch (error) {
     console.error("Error executing command:", error);
-    appendToTerminal(`Error: ${error.message}\n`, 'error');
+    appendToTerminal(`Error: ${error.message}\n>>> `);
     isWaitingForResponse = false;
-    addPrompt();
+    lastSentCommand = ''; // Clear stored command on error
+    if (inputField) inputField.focus();
   }
 }
 
 function initializeTerminal() {
-  serialTerminal.innerHTML = '';
-  appendToTerminal('MicroPython REPL Terminal\n', 'welcome');
-  appendToTerminal('Type "help()" for more information.\n', 'welcome');
-  appendToTerminal('\n>>> ', 'prompt');
-  serialTerminal.focus();
+  terminalContent = '';
+  appendToTerminal('MicroPython REPL Terminal\n');
+  appendToTerminal('Type "help()" for more information.\n');
+  appendToTerminal('\n');
+  appendToTerminal('>>> ');
 
-  // Ensure scrolling is enabled
-  serialTerminal.style.overflowY = 'scroll';
-  serialTerminal.scrollTop = serialTerminal.scrollHeight;
+  // Create input field if it doesn't exist
+  createInputField();
+
+  // Clear any waiting state
+  isWaitingForResponse = false;
+  responseBuffer = '';
+  lastSentCommand = '';
 }
 
 // ESP32 Detection functionality
 esp32DetectButton.addEventListener("click", async () => {
+  // If already connected, don't allow reconnection
+  if (currentESP32Device) {
+    showNotification("ESP32 already connected. Disconnect first to connect a new device.");
+    return;
+  }
+
   try {
     showNotification("Selecting ESP32 device...");
 
@@ -541,9 +523,11 @@ esp32DetectButton.addEventListener("click", async () => {
       const selectedDevice = await esp32Detector.selectDevice();
       currentESP32Device = selectedDevice;
 
-      // Update button text
+      // Update button text and make it non-clickable
       const esp32DetectText = document.getElementById("esp32-detect-text");
       esp32DetectText.textContent = `ESP32 (✓)`;
+      esp32DetectButton.style.pointerEvents = 'none';
+      esp32DetectButton.style.opacity = '0.6';
 
       // Show dropdown items (Flash, Erase, REPL) and change Connect to Disconnect
       esp32FlashButton.style.display = 'block';
@@ -627,6 +611,11 @@ esp32FlashButton.addEventListener("click", async () => {
     currentESP32Device = null;
     const esp32DetectText = document.getElementById("esp32-detect-text");
     esp32DetectText.textContent = "ESP32";
+
+    // Make ESP32 button clickable again
+    esp32DetectButton.style.pointerEvents = 'auto';
+    esp32DetectButton.style.opacity = '1';
+
     esp32FlashButton.style.display = 'none';
     esp32EraseButton.style.display = 'none';
     esp32ConnectButton.innerHTML = '<i class="fa fa-link"></i> Connect';
@@ -681,6 +670,11 @@ esp32EraseButton.addEventListener("click", async () => {
     currentESP32Device = null;
     const esp32DetectText = document.getElementById("esp32-detect-text");
     esp32DetectText.textContent = "ESP32";
+
+    // Make ESP32 button clickable again
+    esp32DetectButton.style.pointerEvents = 'auto';
+    esp32DetectButton.style.opacity = '1';
+
     esp32FlashButton.style.display = 'none';
     esp32EraseButton.style.display = 'none';
     esp32ConnectButton.innerHTML = '<i class="fa fa-link"></i> Connect';
@@ -715,6 +709,10 @@ esp32ConnectButton.addEventListener("click", async () => {
       // Reset the UI
       const esp32DetectText = document.getElementById("esp32-detect-text");
       esp32DetectText.textContent = "ESP32";
+
+      // Make ESP32 button clickable again
+      esp32DetectButton.style.pointerEvents = 'auto';
+      esp32DetectButton.style.opacity = '1';
 
       // Hide dropdown items
       esp32FlashButton.style.display = 'none';
@@ -770,8 +768,8 @@ esp32ReplButton.addEventListener("click", async () => {
     // Set up data receiver
     esp32REPL.onDataReceived = (data) => {
       // Handle initial boot messages (before first prompt)
-      if (!responseBuffer.includes('>>>') && !isWaitingForResponse) {
-        appendOutput(data);
+      if (!isWaitingForResponse) {
+        appendToTerminal(data);
         return;
       }
 
@@ -779,38 +777,39 @@ esp32ReplButton.addEventListener("click", async () => {
       responseBuffer += data;
 
       // Check if we have a complete response (ends with >>> prompt)
-      if (responseBuffer.includes('>>>')) {
-        // Split by the last >>> to separate output from new prompt
-        const parts = responseBuffer.split('>>>');
-        const output = parts.slice(0, -1).join('>>>').trim();
-        const newPrompt = parts[parts.length - 1];
+      if (responseBuffer.includes('>>> ')) {
+        // Filter out the echoed command
+        let cleanResponse = responseBuffer;
 
-        // Display the output
-        if (output) {
-          appendOutput(output + '\n');
+        // Remove the echoed command if it appears at the start of the response
+        if (lastSentCommand && cleanResponse.startsWith(lastSentCommand)) {
+          cleanResponse = cleanResponse.substring(lastSentCommand.length);
+          // Remove any leading newlines or carriage returns after the command
+          cleanResponse = cleanResponse.replace(/^[\r\n]+/, '');
         }
 
-        // Add new prompt
-        appendToTerminal('>>> ', 'prompt');
+        // Remove the final >>> prompt since we handle our own
+        cleanResponse = cleanResponse.replace(/>>> $/, '').trim();
+
+        // Show the clean output
+        if (cleanResponse) {
+          appendToTerminal(cleanResponse + '\n');
+        }
+
+        // Add our own prompt for next command
+        appendToTerminal('>>> ');
 
         // Reset waiting state
         isWaitingForResponse = false;
         responseBuffer = '';
+        lastSentCommand = ''; // Clear the stored command
 
-        // Focus terminal
-        serialTerminal.focus();
-
-        // Set cursor at end
-        const selection = window.getSelection();
-        const range = document.createRange();
-        range.selectNodeContents(serialTerminal);
-        range.collapse(false);
-        selection.removeAllRanges();
-        selection.addRange(range);
-      } else {
-        // Partial response, just display what we have
-        appendOutput(data);
+        // Focus input field
+        if (inputField) {
+          inputField.focus();
+        }
       }
+      // Continue buffering until we get the complete response with >>>
     };
 
     showNotification("REPL connection opened successfully!");
@@ -820,7 +819,7 @@ esp32ReplButton.addEventListener("click", async () => {
     showNotification(`REPL failed: ${error.message}`);
 
     // Show error in terminal
-    appendToTerminal(`Error: ${error.message}\n`, 'error');
+    appendToTerminal(`Error: ${error.message}\n`);
   }
 });
 
