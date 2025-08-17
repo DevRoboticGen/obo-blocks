@@ -4,7 +4,7 @@
  * Uses official esptool-js library for reliable flashing
  */
 
-import { ESPLoader, Transport } from 'esptool-js';
+import { ESPLoader, Transport, HardReset } from 'esptool-js';
 
 class ESP32Flasher {
     constructor() {
@@ -192,9 +192,10 @@ class ESP32Flasher {
                 }
             });
 
-            // Reset device
+            // Reset device using HardReset class
             progressCallback(98, 'Hard resetting...');
-            await loader.hardReset();
+            const hardReset = new HardReset(transport);
+            await hardReset.reset();
 
             progressCallback(100, 'Firmware flashed successfully!');
             console.log('Firmware flashing completed successfully');
