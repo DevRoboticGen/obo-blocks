@@ -245,32 +245,74 @@ function initBlokly(workspace) {
   return workspace;
 }
 
-// ResizeObserver functions disabled - grid layout handles sizing automatically
-// let resizeTimeout;
-// let initialResizeCount = 0;
+// ResizeObserver functions for manual resizing
+let resizeTimeout;
+let initialResizeCount = 0;
 
-// function debounceResize(callback, delay = 100) {
-//   return function () {
-//     clearTimeout(resizeTimeout);
-//     resizeTimeout = setTimeout(callback, delay);
-//   };
-// }
+function debounceResize(callback, delay = 100) {
+  return function () {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(callback, delay);
+  };
+}
 
-// function resizeRightColumn() {
-//   // Grid layout now handles sizing automatically
-// }
+function resizeRightColumn() {
+  // Skip first few resize events during initial page load to prevent ResizeObserver errors
+  initialResizeCount++;
+  if (initialResizeCount <= 5) return;
 
-// Disable ResizeObserver temporarily to prevent slow animation during page load
-// The grid layout now handles sizing automatically
-// if ("ResizeObserver" in window) {
-//   const debouncedResize = debounceResize(resizeRightColumn, 100);
-//   const resizeObserver = new ResizeObserver((entries) => {
-//     requestAnimationFrame(() => {
-//       debouncedResize();
-//     });
-//   });
-//   resizeObserver.observe(codeDiv);
-// }
+  try {
+    const codeRect = codeDiv.getBoundingClientRect();
+    const outputRect = outputDiv.getBoundingClientRect();
+
+    // Only proceed if elements have valid dimensions
+    if (codeRect.height === 0 || outputRect.height === 0) return;
+
+    const newcodeSize = parseInt(codeRect.height.toFixed(0));
+    const totalSize = newcodeSize + parseInt(outputRect.height.toFixed(0));
+
+    // Only adjust if within reasonable bounds and code area is being resized
+    if (newcodeSize > 200 && newcodeSize < totalSize - 150) {
+      const outputSize = totalSize - newcodeSize;
+      outputDiv.style.height = outputSize + "px";
+    }
+  } catch (error) {
+    // Silently handle any measurement errors during resize
+    console.debug("Resize measurement skipped:", error.message);
+  }
+}
+
+// Re-enable targeted ResizeObserver for manual resizing after page is loaded
+if ("ResizeObserver" in window) {
+  const debouncedResize = debounceResize(() => {
+    // Only resize when page is fully loaded and user is actually resizing
+    if (document.readyState === 'complete' && initialResizeCount > 5) {
+      resizeRightColumn();
+      // Ensure Blockly workspace resizes properly
+      if (ws && ws.resize) {
+        setTimeout(() => ws.resize(), 100);
+      }
+    }
+  }, 150);
+
+  const resizeObserver = new ResizeObserver((entries) => {
+    requestAnimationFrame(() => {
+      debouncedResize();
+    });
+  });
+
+  // Start observing after page is fully loaded
+  setTimeout(() => {
+    resizeObserver.observe(codeDiv);
+  }, 1000);
+}
+
+// Add window resize listener for Blockly workspace
+window.addEventListener('resize', debounceResize(() => {
+  if (ws && ws.resize) {
+    setTimeout(() => ws.resize(), 100);
+  }
+}, 200));
 // ------------------------ Initializations -----------------------------------------------------------
 
 ws = initBlokly(ws);
@@ -1275,7 +1317,20 @@ if (navCollapseToggleButton) {
 document.addEventListener("DOMContentLoaded", () => {
   makeUneditable(editable);
   notification.style.transition = "opacity 0.5s ease-in-out";
-  ws.resize();
+
+  // Ensure Blockly workspace resizes properly after page load and grid layout settles
+  setTimeout(() => {
+    if (ws && ws.resize) {
+      ws.resize();
+    }
+  }, 100);
+
+  // Force another resize after grid has fully settled
+  setTimeout(() => {
+    if (ws && ws.resize) {
+      ws.resize();
+    }
+  }, 500);
 
   // Initialize device terminal with welcome message
   deviceTerminal.value = "Connect ESP32 to view device information.";
