@@ -42,6 +42,11 @@ const esp32Flasher = new ESP32Flasher();
 const esp32REPL = new ESP32REPL();
 let currentESP32Device = null;
 
+// Execution state management
+let isExecuting = false;
+let currentExecutionPlatform = null;
+let executionTimeoutHandle = null;
+
 // ------------------ Elements -------------------------
 
 const editbutton = document.getElementById("edit-button");
@@ -51,6 +56,8 @@ const blocklyEditorPanel = document.getElementById("blocky-editor");
 const imageEDit = document.getElementById("editing-image");
 const copyButton = document.getElementById("copy-button");
 const runcodeButton = document.getElementById("run-button");
+const runPyodideButton = document.getElementById("run-pyodide");
+const runESP32Button = document.getElementById("run-esp32");
 const clearButton = document.getElementById("clear-button");
 const stopButton = document.getElementById("stop-button");
 const exportButton = document.getElementById("export-button");
@@ -181,16 +188,152 @@ const options = {
 };
 
 // ----------------------- Function defintions --------------------------------
-async function runcode() {
+async function runcode(platform = 'pyodide') {
+  // Prevent multiple simultaneous executions
+  if (isExecuting) {
+    showNotification(`⚠️ Code is already running on ${currentExecutionPlatform}. Please wait for completion.`);
+    return;
+  }
+
   try {
-    runcodeButton.setAttribute("disabled", true);
-    runButtonText.innerHTML = "Running";
-    let code = editor.state.doc.toString();
-    worker.postMessage({ code: code, command: "run" });
-    runcodeButton.removeAttribute("disabled");
-    runButtonText.innerHTML = "Run";
+    // Set execution state
+    isExecuting = true;
+    currentExecutionPlatform = platform;
+
+    // Disable all run buttons
+    setRunButtonsState(true, "Running");
+
+    const code = editor.state.doc.toString();
+
+    if (platform === 'esp32') {
+      // Run on ESP32
+      await runOnESP32(code);
+    } else {
+      // Run in browser with Pyodide (default)
+      await runInPyodide(code);
+    }
+
   } catch (err) {
     console.error("Error running code:", err);
+    showNotification(`❌ Error: ${err.message}`);
+  } finally {
+    // Always reset execution state
+    resetExecutionState();
+  }
+}
+
+/**
+ * Set the state of all run buttons
+ */
+function setRunButtonsState(disabled, text) {
+  const buttons = [runcodeButton, runPyodideButton, runESP32Button];
+
+  buttons.forEach(button => {
+    if (button) {
+      if (disabled) {
+        button.setAttribute("disabled", true);
+      } else {
+        button.removeAttribute("disabled");
+      }
+    }
+  });
+
+  if (runButtonText) {
+    runButtonText.innerHTML = text;
+  }
+
+  // Update stop button text based on execution state
+  const stopText = document.getElementById("stop-text");
+  if (stopText) {
+    if (disabled) {
+      stopText.innerHTML = "Stop";
+    } else {
+      stopText.innerHTML = "Reset";
+    }
+  }
+}
+
+/**
+ * Reset execution state (used for cleanup)
+ */
+function resetExecutionState() {
+  isExecuting = false;
+  currentExecutionPlatform = null;
+
+  if (executionTimeoutHandle) {
+    clearTimeout(executionTimeoutHandle);
+    executionTimeoutHandle = null;
+  }
+
+  setRunButtonsState(false, "Run");
+}
+
+/**
+ * Check if execution is currently in progress
+ */
+function getExecutionStatus() {
+  return {
+    isExecuting,
+    platform: currentExecutionPlatform
+  };
+}
+
+async function runInPyodide(code) {
+  showNotification("Running code in browser with Pyodide...");
+
+  return new Promise((resolve, reject) => {
+    let timeoutHandle = null;
+
+    // Set up a one-time listener for Pyodide completion
+    const handleWorkerMessage = (event) => {
+      if (event.data.command === 'run_complete') {
+        worker.removeEventListener('message', handleWorkerMessage);
+
+        if (timeoutHandle) {
+          clearTimeout(timeoutHandle);
+          timeoutHandle = null;
+        }
+
+        if (event.data.success) {
+          showNotification("✅ Code executed successfully in browser");
+          resolve();
+        } else {
+          reject(new Error(event.data.error || "Pyodide execution failed"));
+        }
+      }
+    };
+
+    worker.addEventListener('message', handleWorkerMessage);
+    worker.postMessage({ code: code, command: "run" });
+
+    // Timeout after 60 seconds
+    timeoutHandle = setTimeout(() => {
+      worker.removeEventListener('message', handleWorkerMessage);
+      reject(new Error("⏱️ Pyodide execution timeout (60 seconds)"));
+    }, 60000);
+  });
+}
+
+async function runOnESP32(code) {
+  if (!esp32REPL.canExecuteOnESP32()) {
+    throw new Error("ESP32 not connected. Please connect to ESP32 and open REPL first.");
+  }
+
+  showNotification("Running code on ESP32...");
+
+  // Switch to serial monitor to show ESP32 output
+  switchTab('serial-monitor');
+
+  try {
+    const result = await esp32REPL.runPythonCode(code, false); // false = show in REPL
+
+    if (result.success) {
+      showNotification("✅ Code executed successfully on ESP32");
+    } else {
+      throw new Error(result.error || "ESP32 execution failed");
+    }
+  } catch (error) {
+    throw new Error(`ESP32 execution failed: ${error.message}`);
   }
 }
 
@@ -353,8 +496,19 @@ copyButton.addEventListener("click", () => {
   showNotification("Code copied to clipboard");
 });
 
+// Default run button - defaults to Pyodide for backward compatibility
 runcodeButton.addEventListener("click", () => {
-  runcode();
+  runcode('pyodide');
+});
+
+// Run in browser (Pyodide)
+runPyodideButton.addEventListener("click", () => {
+  runcode('pyodide');
+});
+
+// Run on ESP32
+runESP32Button.addEventListener("click", () => {
+  runcode('esp32');
 });
 
 clearButton.addEventListener("click", () => {
@@ -396,7 +550,32 @@ clearButton.addEventListener("click", () => {
 });
 
 stopButton.addEventListener("click", async () => {
-  // Check if we're in serial monitor (REPL) mode
+  // Handle active execution cancellation
+  if (isExecuting) {
+    showNotification(`🛑 Cancelling ${currentExecutionPlatform} execution...`);
+
+    if (currentExecutionPlatform === 'esp32') {
+      // For ESP32, send Ctrl+C to interrupt execution
+      try {
+        await esp32REPL.sendCommand('\x03'); // Ctrl+C - interrupt
+        appendToTerminal('\nKeyboardInterrupt\n>>> ');
+        showNotification("🛑 ESP32 execution interrupted");
+      } catch (error) {
+        console.error("Error interrupting ESP32 execution:", error);
+        showNotification("Failed to interrupt ESP32 execution");
+      }
+    } else {
+      // For Pyodide, terminate the worker
+      stopWorker();
+      showNotification("🛑 Browser execution stopped");
+    }
+
+    // Reset execution state
+    resetExecutionState();
+    return;
+  }
+
+  // Check if we're in serial monitor (REPL) mode and not executing
   if (serialMonitorPanel.classList.contains('active') && esp32REPL.isREPLConnected()) {
     try {
       // Send Ctrl+D for soft reset in MicroPython
@@ -411,6 +590,7 @@ stopButton.addEventListener("click", async () => {
   } else {
     // Default behavior for Python execution
     stopWorker();
+    showNotification("Python execution stopped");
   }
 });
 

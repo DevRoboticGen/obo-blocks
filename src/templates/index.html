@@ -57,8 +57,14 @@
       <div class="button-row">
         <p class="code-title">Python Code</p>
         <div class="button-group">
-          <a class="button btn btn-success btn-sm" id="run-button"><i id="run-icon" class="fa fa-flag"></i>
-            <span id="run-text">Run</span></a>
+          <div class="dropdown-button">
+            <a class="button btn btn-success btn-sm" id="run-button"><i id="run-icon" class="fa fa-flag"></i>
+              <span id="run-text">Run</span><i class="fa fa-chevron-down dropdown-arrow"></i></a>
+            <div class="dropdown-content">
+              <a class="dropdown-item" id="run-pyodide"><i class="fa fa-desktop"></i>Browser</a>
+              <a class="dropdown-item" id="run-esp32"><i class="fa fa-microchip"></i>ESP32</a>
+            </div>
+          </div>
           <a class="button btn btn-outline btn-sm" id="edit-button"><i class="fa fa-pencil"
               style="padding-right: 2px"></i>
             <span id="edit-text">Edit</span></a>

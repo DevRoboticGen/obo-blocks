@@ -61,13 +61,17 @@ function codeRunner(code) {
         isready = true;
     }
     try {
-        pyodide.runPython(code)
+        pyodide.runPython(code);
+        // Send completion message for execution state management
+        self.postMessage({ command: "run_complete", success: true });
     }
     catch (err) {
         console.log(err.message);
         let error = getSyntaxError(err.message);
         console.log(error);
         self.postMessage({ responce: "error", error: error });
+        // Send completion message even on error
+        self.postMessage({ command: "run_complete", success: false, error: error });
     }
 
 }

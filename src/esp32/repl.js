@@ -179,6 +179,201 @@ class ESP32REPL {
             port: this.port ? 'Connected' : 'Disconnected'
         };
     }
+
+    /**
+     * Execute Python code via paste mode (CTRL-E)
+     * Perfect for running editor code directly on ESP32
+     */
+    async executePythonCode(pythonCode, options = {}) {
+        if (!this.isConnected || !this.writer) {
+            throw new Error('REPL not connected');
+        }
+
+        const timeout = options.timeout || 30000; // 30 seconds for code execution
+        const showInREPL = options.showInREPL !== false; // Default to showing in REPL
+        const debug = options.debug !== false; // Default to showing debug info
+
+        return new Promise((resolve, reject) => {
+            let isResolved = false;
+            let responseBuffer = '';
+            let inPasteMode = false;
+            let originalDataHandler = null;
+
+            // Set up timeout
+            const timeoutHandle = setTimeout(() => {
+                if (!isResolved) {
+                    isResolved = true;
+                    this.restoreDataHandler(originalDataHandler);
+                    reject(new Error('Python code execution timeout'));
+                }
+            }, timeout);
+
+            // If we want to hide from REPL UI, temporarily hijack data handler
+            if (!showInREPL) {
+                originalDataHandler = this.onDataReceived;
+                this.onDataReceived = (data) => {
+                    responseBuffer += data;
+                    this.handlePasteModeResponse(data, resolve, reject, timeoutHandle, originalDataHandler, debug);
+                };
+            } else {
+                // For visible execution, we need to track paste mode state differently
+                originalDataHandler = this.onDataReceived;
+                this.onDataReceived = (data) => {
+                    // Still show in REPL but also track our execution
+                    if (originalDataHandler) {
+                        originalDataHandler(data);
+                    }
+                    responseBuffer += data;
+                    this.handlePasteModeResponse(data, resolve, reject, timeoutHandle, originalDataHandler, debug);
+                };
+            }
+
+            // Enter paste mode with CTRL-E
+            this.sendRawData('\x05').then(() => {
+                // Wait a bit for paste mode to be ready
+                setTimeout(() => {
+                    // Clean the Python code and send followed by CTRL-D
+                    const cleanCode = this.cleanPythonCode(pythonCode);
+
+                    // Debug: Log what we're actually sending (if debug enabled)
+                    if (debug) {
+                        console.log('Sending Python code via paste mode:', {
+                            originalLength: pythonCode.length,
+                            cleanedLength: cleanCode.length,
+                            firstLine: cleanCode.split('\n')[0],
+                            preview: cleanCode.substring(0, 50) + (cleanCode.length > 50 ? '...' : '')
+                        });
+                    }
+
+                    this.sendRawData(cleanCode + '\x04').catch((error) => {
+                        if (!isResolved) {
+                            isResolved = true;
+                            clearTimeout(timeoutHandle);
+                            this.restoreDataHandler(originalDataHandler);
+                            reject(error);
+                        }
+                    });
+                }, 100);
+            }).catch((error) => {
+                if (!isResolved) {
+                    isResolved = true;
+                    clearTimeout(timeoutHandle);
+                    this.restoreDataHandler(originalDataHandler);
+                    reject(error);
+                }
+            });
+        });
+    }
+
+    /**
+     * Handle paste mode response data
+     */
+    handlePasteModeResponse(data, resolve, reject, timeoutHandle, originalDataHandler, debug = true) {
+        // Debug: Log raw data received (if debug enabled)
+        if (debug) {
+            console.log('Paste mode response data:', {
+                data: data,
+                includes_paste_mode: data.includes('paste mode; Ctrl-C to cancel, Ctrl-D to finish'),
+                includes_prompt: data.includes('>>> '),
+                includes_error: data.includes('Traceback') || data.includes('Error:')
+            });
+        }
+
+        // Check for paste mode entry
+        if (data.includes('paste mode; Ctrl-C to cancel, Ctrl-D to finish')) {
+            return; // Wait for more data
+        }
+
+        // Check for completion after paste mode
+        if (data.includes('>>> ') || data.includes('Traceback') || data.includes('Error:')) {
+            clearTimeout(timeoutHandle);
+            this.restoreDataHandler(originalDataHandler);
+
+            if (data.includes('Traceback') || data.includes('Error:')) {
+                reject(new Error('Python execution failed - check REPL output for details'));
+            } else {
+                resolve({
+                    success: true,
+                    output: data,
+                    message: 'Python code executed successfully'
+                });
+            }
+        }
+    }
+
+    /**
+     * Restore original data handler
+     */
+    restoreDataHandler(originalHandler) {
+        if (originalHandler) {
+            this.onDataReceived = originalHandler;
+        }
+    }
+
+    /**
+     * Clean Python code for reliable paste mode transmission
+     */
+    cleanPythonCode(pythonCode) {
+        // Remove any BOM or invisible characters that might cause issues
+        let cleaned = pythonCode.replace(/^\uFEFF/, ''); // Remove BOM
+
+        // Normalize line endings to Unix style (\n)
+        cleaned = cleaned.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+        // Remove any trailing whitespace but preserve the code structure
+        cleaned = cleaned.split('\n').map(line => line.trimEnd()).join('\n');
+
+        // Ensure the code ends with a single newline
+        cleaned = cleaned.replace(/\n+$/, '') + '\n';
+
+        return cleaned;
+    }
+
+    /**
+     * Send raw data to REPL without command processing
+     */
+    async sendRawData(data) {
+        if (!this.writer) {
+            throw new Error('REPL writer not available');
+        }
+
+        // Ensure data is clean for transmission
+        const cleanData = typeof data === 'string' ? data : String(data);
+        const dataBytes = new TextEncoder().encode(cleanData);
+        await this.writer.write(dataBytes);
+    }
+
+    /**
+     * Quick execute - run Python code with minimal setup
+     * Ideal for editor integration
+     */
+    async runPythonCode(code, silent = false) {
+        try {
+            const result = await this.executePythonCode(code, {
+                showInREPL: !silent,
+                timeout: 100000
+            });
+
+            return {
+                success: true,
+                platform: 'ESP32',
+                result: result.output
+            };
+        } catch (error) {
+            return {
+                success: false,
+                platform: 'ESP32',
+                error: error.message
+            };
+        }
+    }
+
+    /**
+     * Check if ESP32 execution is available
+     */
+    canExecuteOnESP32() {
+        return this.isConnected && this.writer;
+    }
 }
 
 export default ESP32REPL;
