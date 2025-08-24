@@ -798,4 +798,306 @@ Blockly.Blocks["i2c_scan"] = {
   },
 };
 
+// OBOCar Blocks
+Blockly.Blocks["obocar_setup"] = {
+  init: function () {
+    this.appendDummyInput().appendField("setup OBOCar");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour("#4a90e2");
+    this.setTooltip("Initialize the OBOCar");
+    this.setHelpUrl("");
+  },
+};
+
+Blockly.Blocks["obocar_move_timed"] = {
+  init: function () {
+    this.appendDummyInput()
+      .appendField("move")
+      .appendField(
+        new Blockly.FieldDropdown([
+          ["forward", "FORWARD"],
+          ["backward", "BACKWARD"],
+          ["left", "LEFT"],
+          ["right", "RIGHT"]
+        ]),
+        "DIR"
+      )
+      .appendField("at speed")
+      .appendField(new Blockly.FieldNumber(50, 0, 100), "SPEED")
+      .appendField("% for")
+      .appendField(new Blockly.FieldNumber(1, 0.1, 60), "TIME")
+      .appendField("s");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour("#e67e22");
+    this.setTooltip("Move the car for a specific time");
+    this.setHelpUrl("");
+  },
+};
+
+Blockly.Blocks["obocar_move_continuous"] = {
+  init: function () {
+    this.appendDummyInput()
+      .appendField("move")
+      .appendField(
+        new Blockly.FieldDropdown([
+          ["forward", "FORWARD"],
+          ["backward", "BACKWARD"],
+          ["left", "LEFT"],
+          ["right", "RIGHT"]
+        ]),
+        "DIR"
+      )
+      .appendField("at speed")
+      .appendField(new Blockly.FieldNumber(50, 0, 100), "SPEED")
+      .appendField("%");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour("#e67e22");
+    this.setTooltip("Move the car continuously");
+    this.setHelpUrl("");
+  },
+};
+
+Blockly.Blocks["obocar_stop"] = {
+  init: function () {
+    this.appendDummyInput().appendField("stop");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour("#e67e22");
+    this.setTooltip("Stop the car");
+    this.setHelpUrl("");
+  },
+};
+
+Blockly.Blocks["obocar_left_motor"] = {
+  init: function () {
+    this.appendDummyInput()
+      .appendField("left motor")
+      .appendField(
+        new Blockly.FieldDropdown([
+          ["forward", "FORWARD"],
+          ["backward", "BACKWARD"]
+        ]),
+        "DIR"
+      )
+      .appendField("at speed")
+      .appendField(new Blockly.FieldNumber(50, 0, 100), "SPEED")
+      .appendField("%");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour("#e67e22");
+    this.setTooltip("Control left motor");
+    this.setHelpUrl("");
+  },
+};
+
+Blockly.Blocks["obocar_right_motor"] = {
+  init: function () {
+    this.appendDummyInput()
+      .appendField("right motor")
+      .appendField(
+        new Blockly.FieldDropdown([
+          ["forward", "FORWARD"],
+          ["backward", "BACKWARD"]
+        ]),
+        "DIR"
+      )
+      .appendField("at speed")
+      .appendField(new Blockly.FieldNumber(50, 0, 100), "SPEED")
+      .appendField("%");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour("#e67e22");
+    this.setTooltip("Control right motor");
+    this.setHelpUrl("");
+  },
+};
+
+Blockly.Blocks["obocar_beep"] = {
+  init: function () {
+    this.appendDummyInput()
+      .appendField("beep")
+      .appendField(new Blockly.FieldNumber(800, 1, 20000), "FREQ")
+      .appendField("Hz for")
+      .appendField(new Blockly.FieldNumber(0.3, 0.1, 10), "DURATION")
+      .appendField("s");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour("#9b59b6");
+    this.setTooltip("Make a beep sound");
+    this.setHelpUrl("");
+  },
+};
+
+Blockly.Blocks["obocar_start_tone"] = {
+  init: function () {
+    this.appendDummyInput()
+      .appendField("start tone")
+      .appendField(new Blockly.FieldNumber(800, 1, 20000), "FREQ")
+      .appendField("Hz");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour("#9b59b6");
+    this.setTooltip("Start continuous tone");
+    this.setHelpUrl("");
+  },
+};
+
+Blockly.Blocks["obocar_display"] = {
+  init: function () {
+    this.appendDummyInput()
+      .appendField("display")
+      .appendField(new Blockly.FieldTextInput("Hello!"), "TEXT")
+      .appendField("at x")
+      .appendField(new Blockly.FieldNumber(0, 0, 127), "X")
+      .appendField("y")
+      .appendField(new Blockly.FieldNumber(0, 0, 63), "Y");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour("#2ecc71");
+    this.setTooltip("Display text on OLED");
+    this.setHelpUrl("");
+  },
+};
+
+Blockly.Blocks["obocar_clear_display"] = {
+  init: function () {
+    this.appendDummyInput().appendField("clear display");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour("#2ecc71");
+    this.setTooltip("Clear the OLED display");
+    this.setHelpUrl("");
+  },
+};
+
+Blockly.Blocks["obocar_invert_display"] = {
+  init: function () {
+    this.appendDummyInput()
+      .appendField("invert display")
+      .appendField(
+        new Blockly.FieldDropdown([
+          ["on", "TRUE"],
+          ["off", "FALSE"]
+        ]),
+        "INVERT"
+      );
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour("#2ecc71");
+    this.setTooltip("Invert OLED display");
+    this.setHelpUrl("");
+  },
+};
+
+Blockly.Blocks["obocar_set_contrast"] = {
+  init: function () {
+    this.appendDummyInput()
+      .appendField("set contrast")
+      .appendField(new Blockly.FieldNumber(255, 0, 255), "CONTRAST");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour("#2ecc71");
+    this.setTooltip("Set OLED contrast");
+    this.setHelpUrl("");
+  },
+};
+
+Blockly.Blocks["obocar_scroll"] = {
+  init: function () {
+    this.appendDummyInput()
+      .appendField("scroll")
+      .appendField(
+        new Blockly.FieldDropdown([
+          ["left", "LEFT"],
+          ["right", "RIGHT"]
+        ]),
+        "DIR"
+      )
+      .appendField("by")
+      .appendField(new Blockly.FieldNumber(1, 1, 10), "PIXELS")
+      .appendField("pixels");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour("#2ecc71");
+    this.setTooltip("Scroll OLED display");
+    this.setHelpUrl("");
+  },
+};
+
+Blockly.Blocks["obocar_distance_cm"] = {
+  init: function () {
+    this.appendDummyInput()
+      .appendField("distance")
+      .appendField(
+        new Blockly.FieldDropdown([
+          ["front", "FRONT"],
+          ["left", "LEFT"],
+          ["right", "RIGHT"]
+        ]),
+        "DIR"
+      )
+      .appendField("cm");
+    this.setOutput(true, "Number");
+    this.setColour("#f39c12");
+    this.setTooltip("Get distance in centimeters");
+    this.setHelpUrl("");
+  },
+};
+
+Blockly.Blocks["obocar_distance_mm"] = {
+  init: function () {
+    this.appendDummyInput()
+      .appendField("distance")
+      .appendField(
+        new Blockly.FieldDropdown([
+          ["front", "FRONT"],
+          ["left", "LEFT"],
+          ["right", "RIGHT"]
+        ]),
+        "DIR"
+      )
+      .appendField("mm");
+    this.setOutput(true, "Number");
+    this.setColour("#f39c12");
+    this.setTooltip("Get distance in millimeters");
+    this.setHelpUrl("");
+  },
+};
+
+Blockly.Blocks["obocar_button_pressed"] = {
+  init: function () {
+    this.appendDummyInput()
+      .appendField("button")
+      .appendField(
+        new Blockly.FieldDropdown([
+          ["A", "A"],
+          ["B", "B"]
+        ]),
+        "BUTTON"
+      )
+      .appendField("pressed");
+    this.setOutput(true, "Boolean");
+    this.setColour("#3498db");
+    this.setTooltip("Check if button is pressed");
+    this.setHelpUrl("");
+  },
+};
+
+Blockly.Blocks["obocar_wait"] = {
+  init: function () {
+    this.appendDummyInput()
+      .appendField("wait")
+      .appendField(new Blockly.FieldNumber(1, 0.1, 60), "TIME")
+      .appendField("s");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour("#95a5a6");
+    this.setTooltip("Wait for specified time");
+    this.setHelpUrl("");
+  },
+};
+
 export const blocks = Blockly.Blocks;

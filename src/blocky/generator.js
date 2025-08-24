@@ -512,3 +512,149 @@ forBlock['i2c_scan'] = function(block, generator) {
   var code = `${variable_i2c}.scan()\n`;
   return code;
 };
+
+// OBOCar Code Generators
+forBlock["obocar_setup"] = function (block, generator) {
+  if (!generator.definitions_["import_obocar"]) {
+    generator.definitions_["import_obocar"] = "from obocar import OBOCar";
+  }
+  var code = "car = OBOCar()\n";
+  return code;
+};
+
+forBlock["obocar_move_timed"] = function (block, generator) {
+  var dir = block.getFieldValue("DIR");
+  var speed = block.getFieldValue("SPEED");
+  var time = block.getFieldValue("TIME");
+  
+  var spd_code = "int(512 * " + speed + " / 100)";
+  
+  var code = "";
+  if (dir == "FORWARD") code += "car.move_forward(" + spd_code + ")\n";
+  if (dir == "BACKWARD") code += "car.move_backward(" + spd_code + ")\n";
+  if (dir == "LEFT") code += "car.turn_left(" + spd_code + ")\n";
+  if (dir == "RIGHT") code += "car.turn_right(" + spd_code + ")\n";
+  code += "time.sleep(" + time + ")\ncar.stop()\n";
+  return code;
+};
+
+forBlock["obocar_move_continuous"] = function (block, generator) {
+  var dir = block.getFieldValue("DIR");
+  var speed = block.getFieldValue("SPEED");
+  
+  var spd_code = "int(512 * " + speed + " / 100)";
+  
+  var code = "";
+  if (dir == "FORWARD") code += "car.move_forward(" + spd_code + ")\n";
+  if (dir == "BACKWARD") code += "car.move_backward(" + spd_code + ")\n";
+  if (dir == "LEFT") code += "car.turn_left(" + spd_code + ")\n";
+  if (dir == "RIGHT") code += "car.turn_right(" + spd_code + ")\n";
+  return code;
+};
+
+forBlock["obocar_stop"] = function (block, generator) {
+  var code = "car.stop()\n";
+  return code;
+};
+
+forBlock["obocar_left_motor"] = function (block, generator) {
+  var dir = block.getFieldValue("DIR");
+  var speed = block.getFieldValue("SPEED");
+  
+  var spd_code = "int(512 * " + speed + " / 100)";
+  
+  var code = "";
+  if (dir == "FORWARD") code += "car.left_motor_forward(" + spd_code + ")\n";
+  if (dir == "BACKWARD") code += "car.left_motor_backward(" + spd_code + ")\n";
+  return code;
+};
+
+forBlock["obocar_right_motor"] = function (block, generator) {
+  var dir = block.getFieldValue("DIR");
+  var speed = block.getFieldValue("SPEED");
+  
+  var spd_code = "int(512 * " + speed + " / 100)";
+  
+  var code = "";
+  if (dir == "FORWARD") code += "car.right_motor_forward(" + spd_code + ")\n";
+  if (dir == "BACKWARD") code += "car.right_motor_backward(" + spd_code + ")\n";
+  return code;
+};
+
+forBlock["obocar_beep"] = function (block, generator) {
+  var freq = block.getFieldValue("FREQ");
+  var duration = block.getFieldValue("DURATION");
+  var code = "car.beep(freq=" + freq + ", duration=" + duration + ")\n";
+  return code;
+};
+
+forBlock["obocar_start_tone"] = function (block, generator) {
+  var freq = block.getFieldValue("FREQ");
+  var code = "car.start_tone(" + freq + ")\n";
+  return code;
+};
+
+forBlock["obocar_display"] = function (block, generator) {
+  var text = block.getFieldValue("TEXT");
+  var x = block.getFieldValue("X");
+  var y = block.getFieldValue("Y");
+  var code = 'car.display("' + text + '", ' + x + ", " + y + ")\n";
+  return code;
+};
+
+forBlock["obocar_clear_display"] = function (block, generator) {
+  var code = "car.clear_display()\n";
+  return code;
+};
+
+forBlock["obocar_invert_display"] = function (block, generator) {
+  var invert = block.getFieldValue("INVERT");
+  var code = "car.invert_display(" + invert.toLowerCase() + ")\n";
+  return code;
+};
+
+forBlock["obocar_set_contrast"] = function (block, generator) {
+  var contrast = block.getFieldValue("CONTRAST");
+  var code = "car.set_contrast(" + contrast + ")\n";
+  return code;
+};
+
+forBlock["obocar_scroll"] = function (block, generator) {
+  var dir = block.getFieldValue("DIR");
+  var pixels = block.getFieldValue("PIXELS");
+  var code = "car.scroll_" + dir.toLowerCase() + "(" + pixels + ")\n";
+  return code;
+};
+
+forBlock["obocar_distance_cm"] = function (block, generator) {
+  var dir = block.getFieldValue("DIR");
+  var code = "";
+  if (dir == "FRONT") code = "car.get_front_distance()";
+  if (dir == "LEFT") code = "car.get_left_distance()";
+  if (dir == "RIGHT") code = "car.get_right_distance()";
+  return [code, Order.ATOMIC];
+};
+
+forBlock["obocar_distance_mm"] = function (block, generator) {
+  var dir = block.getFieldValue("DIR");
+  var code = "";
+  if (dir == "FRONT") code = "car.get_front_distance() * 10";
+  if (dir == "LEFT") code = "car.get_left_distance() * 10";
+  if (dir == "RIGHT") code = "car.get_right_distance() * 10";
+  return [code, Order.ATOMIC];
+};
+
+forBlock["obocar_button_pressed"] = function (block, generator) {
+  var button = block.getFieldValue("BUTTON");
+  var code = "car.button_" + button.toLowerCase() + "_pressed()";
+  return [code, Order.ATOMIC];
+};
+
+forBlock["obocar_wait"] = function (block, generator) {
+  if (!generator.definitions_["import_time"]) {
+    generator.definitions_["import_time"] = "import time";
+  }
+  var time = block.getFieldValue("TIME");
+  var code = "time.sleep(" + time + ")\n";
+  return code;
+};

@@ -44,6 +44,27 @@ const categoryStyles = {
   i2c_category: {
     colour: "#797c7d",
   },
+  obocar_category: {
+    colour: "#4a90e2",
+  },
+  motors_category: {
+    colour: "#e67e22",
+  },
+  buzzer_category: {
+    colour: "#9b59b6",
+  },
+  display_category: {
+    colour: "#2ecc71",
+  },
+  sensors_category: {
+    colour: "#f39c12",
+  },
+  buttons_category: {
+    colour: "#3498db",
+  },
+  timing_category: {
+    colour: "#95a5a6",
+  },
 };
 
 export const theme = Blockly.Theme.defineTheme("mytheme", {

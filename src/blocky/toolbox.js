@@ -239,6 +239,129 @@ export const toolbox = {
       name: "I2C",
       categorystyle: "i2c_category",
       custom: "I2C",
+    },
+    {
+      kind: "sep",
+    },
+    {
+      kind: "category",
+      name: "Obo Car",
+      categorystyle: "obocar_category",
+      contents: [
+        {
+          kind: "block",
+          type: "obocar_setup",
+        },
+        {
+          kind: "sep",
+        },
+        {
+          kind: "category",
+          name: "Motors",
+          categorystyle: "motors_category",
+          contents: [
+            {
+              kind: "block",
+              type: "obocar_move_timed",
+            },
+            {
+              kind: "block",
+              type: "obocar_move_continuous",
+            },
+            {
+              kind: "block",
+              type: "obocar_stop",
+            },
+            {
+              kind: "block",
+              type: "obocar_left_motor",
+            },
+            {
+              kind: "block",
+              type: "obocar_right_motor",
+            },
+          ],
+        },
+        {
+          kind: "category",
+          name: "Buzzer",
+          categorystyle: "buzzer_category",
+          contents: [
+            {
+              kind: "block",
+              type: "obocar_beep",
+            },
+            {
+              kind: "block",
+              type: "obocar_start_tone",
+            },
+          ],
+        },
+        {
+          kind: "category",
+          name: "Display",
+          categorystyle: "display_category",
+          contents: [
+            {
+              kind: "block",
+              type: "obocar_display",
+            },
+            {
+              kind: "block",
+              type: "obocar_clear_display",
+            },
+            {
+              kind: "block",
+              type: "obocar_invert_display",
+            },
+            {
+              kind: "block",
+              type: "obocar_set_contrast",
+            },
+            {
+              kind: "block",
+              type: "obocar_scroll",
+            },
+          ],
+        },
+        {
+          kind: "category",
+          name: "Sensors",
+          categorystyle: "sensors_category",
+          contents: [
+            {
+              kind: "block",
+              type: "obocar_distance_cm",
+            },
+            {
+              kind: "block",
+              type: "obocar_distance_mm",
+            },
+          ],
+        },
+        {
+          kind: "category",
+          name: "Buttons",
+          categorystyle: "buttons_category",
+          contents: [
+            {
+              kind: "block",
+              type: "obocar_button_pressed",
+            },
+          ],
+        },
+        {
+          kind: "category",
+          name: "Timing",
+          categorystyle: "timing_category",
+          contents: [
+            {
+              kind: "block",
+              type: "obocar_wait",
+            },
+          ],
+        },
+      ],
     }
   ],
 };

@@ -15,6 +15,29 @@ Obo Blocks is a project aimed at easing the transition from visual programming t
 3. **Code Evaluation -** Interpret Python code within the platform using Pydiode for instant feedback.
 4. **Micropython Extension -** Emulate underlaying hardware for to run micropython code with in platform(With Completion of Coffee Code Research Project)
 5. **Web Driven Code Uploader** - Upload generated Code Snippet to generated Code Snippet to ESP32
+6. **OBOCar Integration -** Complete visual programming support for OBOCar robotics platform with drag-and-drop blocks for movement, sensors, display, and sound control.
+
+## OBOCar Support
+
+Obo Blocks now includes comprehensive support for the OBOCar robotics platform, providing a complete visual programming environment for educational robotics:
+
+### Available OBOCar Features:
+- **Setup** - Initialize the OBOCar instance
+- **Movement Control** - Forward, backward, left, right movement with speed control
+- **Individual Motor Control** - Precise control of left and right motors
+- **Distance Sensors** - Front, left, and right distance measurement in cm/mm
+- **OLED Display** - Text display, contrast control, scrolling, and inversion
+- **Buzzer Control** - Beep sounds and continuous tone generation
+- **Button Input** - A and B button state detection
+- **Timing Control** - Precise timing and delays
+
+**Note:** All OBOCar blocks are organized in a single collapsible "Obo Car" category with logical subcategories (Motors, Buzzer, Display, Sensors, Buttons, Timing) for better organization.
+
+### Benefits:
+- **Visual Programming** - Drag-and-drop interface for complex robot behaviors
+- **Real-time Code Generation** - Automatic Python code generation compatible with MicroPython
+- **Educational Focus** - Perfect for teaching robotics and programming concepts
+- **Immediate Feedback** - See generated code instantly while building programs
 
 ## Components
 
