@@ -1520,7 +1520,7 @@ esp32LibrariesButton.addEventListener("click", async () => {
     esp32FileUtils = new ESP32FileUtils(esp32REPL);
   }
 
-  openLibraryModal();
+  showNotification('Library manager is disabled in this build.');
 });
 
 importJsonButton.addEventListener("click", () => {
@@ -1656,18 +1656,12 @@ let installedLibraries = new Set();
 /**
  * Open the library manager modal
  */
-function openLibraryModal() {
-  libraryModal.style.display = 'block';
-  loadLibraries();
-}
+function openLibraryModal() { }
 
 /**
  * Close the library manager modal
  */
-function closeLibraryModal() {
-  libraryModal.style.display = 'none';
-  clearLibraryStatus();
-}
+function closeLibraryModal() { }
 
 /**
  * Load available libraries from MicroPython registry
@@ -1783,13 +1777,7 @@ function clearLibraryStatus() {
 }
 
 // Modal event listeners
-libraryModalClose.addEventListener('click', closeLibraryModal);
-
-libraryModal.addEventListener('click', (e) => {
-  if (e.target === libraryModal) {
-    closeLibraryModal();
-  }
-});
+// Library modal listeners removed
 
 librarySearchInput.addEventListener('input', (e) => {
   filterLibraries(e.target.value);
@@ -1798,11 +1786,7 @@ librarySearchInput.addEventListener('input', (e) => {
 libraryRefreshButton.addEventListener('click', loadLibraries);
 
 // Close modal with Escape key
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && libraryModal.style.display === 'block') {
-    closeLibraryModal();
-  }
-});
+// Escape handler removed for library modal
 
 // Make installLibrary function globally available
 window.installLibrary = installLibrary;
