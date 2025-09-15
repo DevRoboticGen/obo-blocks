@@ -37,6 +37,16 @@ module.exports = {
         hot: true,
         compress: true,
     },
+    resolve: {
+        fallback: {
+            "crypto": require.resolve("crypto-browserify"),
+            "stream": require.resolve("stream-browserify"),
+            "buffer": require.resolve("buffer"),
+            "path": require.resolve("path-browserify"),
+            "vm": require.resolve("vm-browserify"),
+            "fs": false
+        }
+    },
     module: {
         rules: [
             {
@@ -69,6 +79,7 @@ module.exports = {
                 { from: "src/assets/obo_blocks.webp", to: "" },
                 { from: "src/assets/editing.gif", to: "" },
                 { from: "src/assets/firmware", to: "firmware" }, // Copy firmware files
+                { from: "node_modules/@pybricks/mpy-cross-v6/build/mpy-cross-v6.wasm", to: "assets/micropython/mpy-cross-v6.wasm" },
             ]
         }),
         new MiniCssExtractPlugin({

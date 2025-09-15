@@ -875,3 +875,337 @@ body {
 .nav-bar .btn-outline:hover {
   background: rgba(255, 255, 255, 0.12);
 }
+
+/* Library Manager Modal Styles */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+}
+
+.modal-content {
+  background-color: #f9f9f9;
+  margin: 3% auto;
+  padding: 0;
+  border: 1px solid #ccc;
+  border-radius: 0.3rem;
+  width: 90%;
+  max-width: 900px;
+  max-height: 85vh;
+  box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+  font-family: "Roboto", sans-serif;
+}
+
+/* Removed modalSlideIn animation to keep styling simple and consistent */
+
+.modal-header {
+  background-color: #9d9d9d;
+  color: white;
+  padding: 1rem 1.5rem;
+  border-radius: 0.3rem 0.3rem 0 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 400;
+  flex: 1;
+}
+
+.modal-header p {
+  margin: 0;
+  opacity: 0.9;
+  font-size: 0.9rem;
+  font-weight: 300;
+}
+
+.close {
+  position: absolute;
+  right: 1rem;
+  top: 1rem;
+  color: white;
+  font-size: 1.5rem;
+  font-weight: bold;
+  cursor: pointer;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+  background: none;
+  border: none;
+  padding: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close:hover {
+  opacity: 1;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 0.2rem;
+}
+
+.modal-body {
+  padding: 1.5rem;
+  max-height: 65vh;
+  overflow-y: auto;
+  background-color: #ffffff;
+}
+
+.library-search {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  align-items: center;
+}
+
+.library-search input {
+  flex: 1;
+  padding: 0.5rem 0.8rem;
+  border: 1px solid #ccc;
+  border-radius: 0.3rem;
+  font-size: 0.9rem;
+  font-family: "Roboto", sans-serif;
+  transition: border-color 0.2s;
+}
+
+.library-search input:focus {
+  outline: none;
+  border-color: #1a3a59;
+}
+
+.library-search button {
+  min-width: 4rem;
+  height: 2.4rem;
+  padding: 0.3rem 0.8rem;
+  background-color: #9d9d9d;
+  color: white;
+  border: none;
+  border-radius: 0.3rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 400;
+  transition: background-color 0.2s;
+}
+
+.library-search button:hover {
+  background-color: #1a3a59ec;
+}
+
+.library-status {
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  display: none;
+}
+
+.library-status.success {
+  background: #f0fff4;
+  color: #22543d;
+  border: 1px solid #c6f6d5;
+  display: block;
+}
+
+.library-status.error {
+  background: #fff5f5;
+  color: #742a2a;
+  border: 1px solid #fed7d7;
+  display: block;
+}
+
+.library-status.info {
+  background: #ebf8ff;
+  color: #1a365d;
+  border: 1px solid #bee3f8;
+  display: block;
+}
+
+.library-list {
+  display: grid;
+  gap: 12px;
+}
+
+.library-loading {
+  text-align: center;
+  padding: 40px 20px;
+  color: #718096;
+  font-size: 16px;
+}
+
+.library-item {
+  border: 1px solid #ddd;
+  border-radius: 0.3rem;
+  padding: 1rem;
+  margin-bottom: 0.5rem;
+  transition: all 0.2s;
+  background: white;
+}
+
+.library-item:hover {
+  border-color: #1a3a59;
+  box-shadow: 0px 4px 8px 0px rgba(0, 0, 0, 0.1);
+}
+
+.library-item.installing {
+  border-color: #f4a261;
+  background: #fdf8f1;
+}
+
+.library-item.installed {
+  border-color: #2a9d8f;
+  background: #f1f9f8;
+}
+
+.library-header {
+  display: flex;
+  justify-content: between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.library-info {
+  flex: 1;
+}
+
+.library-name {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: #333;
+  margin: 0 0 0.5rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.library-badge {
+  font-size: 0.7rem;
+  font-weight: 400;
+  padding: 0.2rem 0.5rem;
+  border-radius: 0.2rem;
+  text-transform: uppercase;
+}
+
+.library-badge.popular {
+  background: #e8f5e8;
+  color: #2a9d8f;
+  border: 1px solid #2a9d8f;
+}
+
+.library-badge.category {
+  background: #f9f9f9;
+  color: #666;
+  border: 1px solid #ccc;
+}
+
+.library-description {
+  color: #666;
+  font-size: 0.9rem;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.library-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.library-button {
+  /* Inherit from .button class and override specific styles */
+  min-width: 5rem;
+  height: 2rem;
+  padding: 0.3rem 0.8rem;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.library-button.install {
+  background-color: #9d9d9d;
+  color: white;
+}
+
+.library-button.install:hover:not(:disabled) {
+  background-color: #1a3a59ec;
+}
+
+.library-button.installing {
+  background-color: #f4a261;
+  color: white;
+  cursor: not-allowed;
+}
+
+.library-button.installed {
+  background-color: #2a9d8f;
+  color: white;
+  cursor: default;
+}
+
+.library-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.library-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: #718096;
+}
+
+.library-empty i {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+/* Responsive design for library modal */
+@media (max-width: 768px) {
+  .modal-content {
+    width: 95%;
+    margin: 2% auto;
+    max-height: 90vh;
+  }
+
+  .modal-header {
+    padding: 16px 20px;
+  }
+
+  .modal-header h2 {
+    font-size: 20px;
+  }
+
+  .modal-body {
+    padding: 20px;
+  }
+
+  .library-search {
+    flex-direction: column;
+  }
+
+  .library-search button {
+    width: 100%;
+  }
+
+  .library-header {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .library-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .library-button {
+    flex: 1;
+  }
+}

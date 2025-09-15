@@ -32,6 +32,7 @@ import { pinCategoryFlyout, adcCategoryFlyout, pwmCategoryFlyout, i2cCategoryFly
 import ESP32Detector from "./esp32/detection";
 import ESP32Flasher from "./esp32/flash";
 import ESP32REPL from "./esp32/repl";
+import ESP32FileUtils from "./esp32/fileUtils";
 
 let editable = false;
 let ws;
@@ -40,6 +41,7 @@ let ws;
 const esp32Detector = new ESP32Detector();
 const esp32Flasher = new ESP32Flasher();
 const esp32REPL = new ESP32REPL();
+let esp32FileUtils = null; // Initialize when REPL is connected
 let currentESP32Device = null;
 
 // Execution state management
@@ -66,6 +68,7 @@ const esp32ConnectButton = document.getElementById("esp32-connect-button");
 const esp32FlashButton = document.getElementById("esp32-flash-button");
 const esp32EraseButton = document.getElementById("esp32-erase-button");
 const esp32ReplButton = document.getElementById("esp32-repl-button");
+const esp32LibrariesButton = document.getElementById("esp32-libraries-button");
 const importJsonButton = document.getElementById("import-json-button");
 const exportJsonButton = document.getElementById("export-json-button");
 const collapseToggleButton = document.getElementById("collapse-toggle-button");
@@ -91,10 +94,13 @@ const editbuttonText = document.getElementById("edit-text");
 const codeDiv = document.getElementById("code");
 const outputDiv = document.getElementById("output");
 
+// Library UI removed
+
 // Initialize ESP32 dropdown items as hidden
 esp32FlashButton.style.display = 'none';
 esp32EraseButton.style.display = 'none';
 esp32ReplButton.style.display = 'none';
+esp32LibrariesButton.style.display = 'none';
 
 // Get references to dropdown elements  
 const esp32DropdownButton = esp32DetectButton.closest('.dropdown-button');
@@ -145,6 +151,65 @@ async function closeAndCleanupREPL(disconnectionMessage = 'REPL connection close
 
     // Add disconnection message to terminal
     serialTerminal.textContent = disconnectionMessage;
+
+    // Update REPL button state if the button exists
+    if (typeof updateREPLButtonState === 'function') {
+      updateREPLButtonState();
+    }
+  }
+}
+
+// Function to close REPL only (without disconnecting ESP32 device)
+async function closeREPLOnly() {
+  if (!esp32REPL.isREPLConnected()) {
+    return;
+  }
+
+  try {
+    showNotification("Closing REPL connection...");
+
+    // Close REPL connection but keep device connected
+    await esp32REPL.closeREPL();
+
+    // Clear terminal content and reset state
+    terminalContent = '';
+    serialTerminal.textContent = '';
+
+    // Reset terminal state variables
+    isWaitingForResponse = false;
+    responseBuffer = '';
+    lastSentCommand = '';
+    isMultiLineMode = false;
+    multiLineBuffer = [];
+    currentIndentLevel = 0;
+    commandHistory = [];
+    historyIndex = -1;
+
+    // Remove input field if it exists
+    if (inputField) {
+      inputField.remove();
+      inputField = null;
+    }
+
+    // Add disconnection message to terminal
+    serialTerminal.textContent = 'REPL disconnected.\nClick "REPL" to reconnect.';
+
+    // Update REPL button to show "open" state
+    updateREPLButtonState();
+
+    showNotification("REPL connection closed");
+  } catch (error) {
+    console.error("Error closing REPL:", error);
+    showNotification(`Error closing REPL: ${error.message}`);
+  }
+}
+
+// Function to update REPL button state based on connection status
+function updateREPLButtonState() {
+  if (esp32REPL.isREPLConnected()) {
+    esp32ReplButton.innerHTML = '<i class="fa fa-times"></i> Close REPL';
+  } else {
+    esp32ReplButton.innerHTML = '<i class="fa fa-terminal"></i> REPL';
   }
 }
 
@@ -1046,10 +1111,14 @@ esp32DetectButton.addEventListener("click", async () => {
       const esp32DetectText = document.getElementById("esp32-detect-text");
       esp32DetectText.textContent = `ESP32`;
 
-      // Show dropdown items (Flash, Erase, REPL) and change Connect to Disconnect
+      // Show dropdown items (Flash, Erase, REPL, Libraries) and change Connect to Disconnect
       esp32FlashButton.style.display = 'block';
       esp32EraseButton.style.display = 'block';
       esp32ReplButton.style.display = 'block';
+      esp32LibrariesButton.style.display = 'block';
+
+      // Update REPL button state
+      updateREPLButtonState();
 
       // Change Connect button to Disconnect
       esp32ConnectButton.innerHTML = '<i class="fa fa-unlink"></i> Disconnect';
@@ -1172,6 +1241,12 @@ esp32FlashButton.addEventListener("click", async () => {
     // Clean up REPL on flash error too
     await closeAndCleanupREPL('Flash failed. Device may be disconnected.\nConnect to ESP32 and open REPL to start a new session.\n');
 
+    esp32ReplButton.style.display = 'none';
+    esp32LibrariesButton.style.display = 'none';
+
+    // Reset REPL button to default state
+    esp32ReplButton.innerHTML = '<i class="fa fa-terminal"></i> REPL';
+
     deviceTerminal.value += `\n❌ Firmware flashing failed: ${error.message}\n`;
     deviceTerminal.value += `Make sure ESP32 is in download mode (hold BOOT button while connecting).\n\n`;
     deviceTerminal.scrollTop = deviceTerminal.scrollHeight;
@@ -1242,6 +1317,12 @@ esp32EraseButton.addEventListener("click", async () => {
     esp32ConnectButton.innerHTML = '<i class="fa fa-link"></i> Connect';
     esp32ConnectButton.id = 'esp32-connect-button';
 
+    esp32ReplButton.style.display = 'none';
+    esp32LibrariesButton.style.display = 'none';
+
+    // Reset REPL button to default state
+    esp32ReplButton.innerHTML = '<i class="fa fa-terminal"></i> REPL';
+
   } catch (error) {
     console.error("Flash erase error:", error);
 
@@ -1279,6 +1360,7 @@ esp32ConnectButton.addEventListener("click", async () => {
       esp32FlashButton.style.display = 'none';
       esp32EraseButton.style.display = 'none';
       esp32ReplButton.style.display = 'none';
+      esp32LibrariesButton.style.display = 'none';
 
       // Change Disconnect button back to Connect
       esp32ConnectButton.innerHTML = '<i class="fa fa-link"></i> Connect';
@@ -1322,13 +1404,21 @@ esp32ConnectButton.addEventListener("click", async () => {
   }
 });
 
-// ESP32 REPL functionality
+// ESP32 REPL functionality - Toggle between open and close
 esp32ReplButton.addEventListener("click", async () => {
   if (!currentESP32Device) {
     showNotification("No ESP32 device connected");
     return;
   }
 
+  // Check if REPL is already connected
+  if (esp32REPL.isREPLConnected()) {
+    // Close REPL only (keep device connected)
+    await closeREPLOnly();
+    return;
+  }
+
+  // Open REPL connection
   try {
     showNotification("Opening REPL connection...");
 
@@ -1396,6 +1486,9 @@ esp32ReplButton.addEventListener("click", async () => {
       // Continue buffering until we get the complete response with >>>
     };
 
+    // Update button state to show close option
+    updateREPLButtonState();
+
     showNotification("REPL connection opened successfully!");
 
   } catch (error) {
@@ -1404,7 +1497,30 @@ esp32ReplButton.addEventListener("click", async () => {
 
     // Show error in terminal
     appendToTerminal(`Error: ${error.message}\n`);
+
+    // Make sure button state is correct after error
+    updateREPLButtonState();
   }
+});
+
+// ESP32 Libraries functionality
+esp32LibrariesButton.addEventListener("click", async () => {
+  if (!currentESP32Device) {
+    showNotification("No ESP32 device connected");
+    return;
+  }
+
+  if (!esp32REPL.isREPLConnected()) {
+    showNotification("ESP32 REPL not connected. Please open REPL first.");
+    return;
+  }
+
+  // Initialize file utils if not already done
+  if (!esp32FileUtils) {
+    esp32FileUtils = new ESP32FileUtils(esp32REPL);
+  }
+
+  openLibraryModal();
 });
 
 importJsonButton.addEventListener("click", () => {
@@ -1530,3 +1646,163 @@ document.addEventListener("DOMContentLoaded", () => {
     esp32DropdownButton.classList.remove('dropdown-enabled');
   }
 });
+
+// ============== ESP32 Library Manager (disabled) ===============
+
+let librariesData = [];
+let filteredLibraries = [];
+let installedLibraries = new Set();
+
+/**
+ * Open the library manager modal
+ */
+function openLibraryModal() {
+  libraryModal.style.display = 'block';
+  loadLibraries();
+}
+
+/**
+ * Close the library manager modal
+ */
+function closeLibraryModal() {
+  libraryModal.style.display = 'none';
+  clearLibraryStatus();
+}
+
+/**
+ * Load available libraries from MicroPython registry
+ */
+async function loadLibraries() {
+  showLibraryStatus('Loading libraries...', 'info');
+  libraryList.innerHTML = '<div class="library-loading"><i class="fa fa-spinner fa-spin"></i> Loading libraries...</div>';
+
+  // Libraries disabled
+  renderLibraries();
+  clearLibraryStatus();
+}
+
+/**
+ * Get description for a library
+ */
+function getLibraryDescription(name) {
+  const descriptions = {
+    'ssd1306': 'OLED display driver for SSD1306 controller',
+    'urequests': 'HTTP requests library for MicroPython',
+    'umqtt.simple': 'Simple MQTT client for IoT applications',
+    'neopixel': 'Control WS2812 RGB LED strips',
+    'dht': 'Temperature and humidity sensor driver',
+    'ds18x20': 'Dallas 1-wire temperature sensor',
+    'onewire': '1-wire protocol implementation',
+    'ntptime': 'Network Time Protocol client',
+    'upip': 'MicroPython package installer',
+    'json': 'JSON encoder and decoder',
+    'time': 'Time-related functions',
+    'machine': 'Hardware abstraction layer',
+    'network': 'Network interface control',
+    'socket': 'Socket communication',
+    'ssl': 'SSL/TLS encryption'
+  };
+
+  return descriptions[name] || `MicroPython library for ${name}`;
+}
+
+/**
+ * Render the libraries list
+ */
+function renderLibraries() {
+  if (filteredLibraries.length === 0) {
+    libraryList.innerHTML = `
+      <div class="library-empty">
+        <i class="fa fa-search"></i>
+        <h3>No Libraries Found</h3>
+        <p>Try a different search term.</p>
+      </div>
+    `;
+    return;
+  }
+
+  libraryList.innerHTML = filteredLibraries.map(lib => {
+    const isInstalled = installedLibraries.has(lib.name);
+    const isInstalling = false; // We'll track this with button state
+
+    return `
+      <div class="library-item ${isInstalled ? 'installed' : ''}" data-library="${lib.name}">
+        <div class="library-header">
+          <div class="library-info">
+            <h3 class="library-name">
+              ${lib.name}
+              ${lib.popular ? '<span class="library-badge popular">Popular</span>' : ''}
+              ${lib.category ? `<span class="library-badge category">${lib.category}</span>` : ''}
+            </h3>
+            <p class="library-description">${lib.description}</p>
+          </div>
+          <div class="library-actions">
+            <button class="button library-button ${isInstalled ? 'installed' : 'install'}" 
+                    onclick="installLibrary('${lib.name}')"
+                    ${isInstalled ? 'disabled' : ''}>
+              <i class="fa ${isInstalled ? 'fa-check' : 'fa-download'}"></i>
+              ${isInstalled ? 'Installed' : 'Install'}
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+/**
+ * Install a library
+ */
+async function installLibrary() { showNotification('Library installation is disabled in this build.'); }
+
+/**
+ * Filter libraries based on search
+ */
+function filterLibraries(searchTerm) {
+  const term = searchTerm.toLowerCase();
+  filteredLibraries = librariesData.filter(lib =>
+    lib.name.toLowerCase().includes(term) ||
+    lib.description.toLowerCase().includes(term)
+  );
+  renderLibraries();
+}
+
+/**
+ * Show library status message
+ */
+function showLibraryStatus(message, type) {
+  libraryStatus.textContent = message;
+  libraryStatus.className = `library-status ${type}`;
+}
+
+/**
+ * Clear library status message
+ */
+function clearLibraryStatus() {
+  libraryStatus.className = 'library-status';
+}
+
+// Modal event listeners
+libraryModalClose.addEventListener('click', closeLibraryModal);
+
+libraryModal.addEventListener('click', (e) => {
+  if (e.target === libraryModal) {
+    closeLibraryModal();
+  }
+});
+
+librarySearchInput.addEventListener('input', (e) => {
+  filterLibraries(e.target.value);
+});
+
+libraryRefreshButton.addEventListener('click', loadLibraries);
+
+// Close modal with Escape key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && libraryModal.style.display === 'block') {
+    closeLibraryModal();
+  }
+});
+
+// Make installLibrary function globally available
+window.installLibrary = installLibrary;

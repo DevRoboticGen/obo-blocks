@@ -84,6 +84,7 @@
               <a class="dropdown-item" id="esp32-flash-button"><i class="fa fa-download"></i> Flash</a>
               <a class="dropdown-item" id="esp32-erase-button"><i class="fa fa-trash"></i> Erase</a>
               <a class="dropdown-item" id="esp32-repl-button"><i class="fa fa-terminal"></i> REPL</a>
+              <a class="dropdown-item" id="esp32-libraries-button"><i class="fa fa-cubes"></i> Libraries</a>
             </div>
           </div>
         </div>
@@ -180,5 +181,30 @@
       "url": "https://oboblocks.roboticgenacademy.com/"
     }
   </script>
+
+<!-- ESP32 Library Manager Modal -->
+<div id="library-modal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <span class="close" id="library-modal-close">&times;</span>
+      <div>
+        <h2><i class="fa fa-cubes"></i> MicroPython Libraries</h2>
+        <p>Install libraries directly to your ESP32</p>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div class="library-search">
+        <input type="text" id="library-search-input" placeholder="Search libraries..." />
+        <button id="library-refresh-button"><i class="fa fa-refresh"></i> Refresh</button>
+      </div>
+      <div id="library-status" class="library-status"></div>
+      <div id="library-list" class="library-list">
+        <div class="library-loading">
+          <i class="fa fa-spinner fa-spin"></i> Loading libraries...
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
 </html>
