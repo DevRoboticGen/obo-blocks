@@ -32,6 +32,7 @@
     "webpack-dev-server": "^5.0.4"
   },
   "dependencies": {
+    "@pybricks/mpy-cross-v6": "2.0.0",
     "esptool-js": "^0.5.7"
   }
 }
