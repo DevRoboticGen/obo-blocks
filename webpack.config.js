@@ -19,9 +19,9 @@ module.exports = {
     },
     optimization: {
         splitChunks: {
-          chunks: 'all',
+            chunks: 'all',
         },
-      },
+    },
     devtool: 'source-map',
     devServer: {
         static:
@@ -36,6 +36,16 @@ module.exports = {
         open: true,
         hot: true,
         compress: true,
+    },
+    resolve: {
+        fallback: {
+            "crypto": require.resolve("crypto-browserify"),
+            "stream": require.resolve("stream-browserify"),
+            "buffer": require.resolve("buffer"),
+            "path": require.resolve("path-browserify"),
+            "vm": require.resolve("vm-browserify"),
+            "fs": false
+        }
     },
     module: {
         rules: [
@@ -64,10 +74,12 @@ module.exports = {
         new CopyWebpackPlugin({
             patterns: [
                 { from: "src/assets/blockly_media", to: "media" }, // Adjust source and destination paths as needed
-                { from: "src/SEO", to: ""},
-                { from: "src/assets/academyLogo.webp", to: ""},
-                { from: "src/assets/obo_blocks.webp", to: ""},
-                { from: "src/assets/editing.gif",to: "" },
+                { from: "src/SEO", to: "" },
+                { from: "src/assets/academyLogo.webp", to: "" },
+                { from: "src/assets/obo_blocks.webp", to: "" },
+                { from: "src/assets/editing.gif", to: "" },
+                { from: "src/assets/firmware", to: "firmware" }, // Copy firmware files
+                { from: "node_modules/@pybricks/mpy-cross-v6/build/mpy-cross-v6.wasm", to: "assets/micropython/mpy-cross-v6.wasm" },
             ]
         }),
         new MiniCssExtractPlugin({

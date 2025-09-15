@@ -1,3 +1,10 @@
+/* Universal box-sizing to prevent overflow issues */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 .notification {
   font-family: "Roboto", sans-serif;
   font-weight: 300;
@@ -12,7 +19,46 @@
   border-radius: 5px;
   opacity: 0;
   /* transition: opacity 2s ease-in-out; */
-  z-index: 9999; /* Ensure it appears on top of other elements */
+  z-index: 9999;
+  /* Ensure it appears on top of other elements */
+}
+
+/* Global button style so buttons look consistent in nav and toolbars */
+.button {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-around;
+  margin: 0.2rem;
+  padding: 0.3rem;
+  min-width: 4rem;
+  height: 1.4rem;
+  border-radius: 0.3rem;
+  border: none;
+  color: #ffffff;
+  font-weight: 400;
+  font-size: medium;
+  background-color: #9d9d9d;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.button:hover:not(.btn) {
+  background-color: #1a3a59ec;
+}
+
+/* Nav-only hover so it doesn't blend into the title bar */
+#nav-collapse-toggle-button:hover:not(.btn) {
+  background-color: #7f7f7f;
+}
+
+/* Ensure symmetric margins when blocks panel is hidden */
+.container-editing .code {
+  margin-left: 0.5rem;
+}
+
+.container-editing .output {
+  margin-left: 0.5rem;
 }
 
 .notification.show {
@@ -47,41 +93,54 @@
   margin: 0.5rem 0.5rem 0.5rem 1rem;
 }
 
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .blocky-editor {
   grid-area: editor;
   display: flex;
   flex-direction: column;
   /* align-items: center; */
-  justify-content: center;
+  justify-content: flex-start;
   border-radius: 0.6rem;
   background-color: white;
   border: 0.1rem solid rgba(77, 151, 255, 0.25);
   padding: 0rem 0.2rem 0.2rem 0.2rem;
   box-shadow: 2px 3px 18px 0px rgba(0, 0, 0, 0.34);
   margin-left: 0.5rem;
+  overflow: visible;
+  min-width: 400px;
 }
 
 .editor {
-  height: 99%;
-  width: 99%;
+  height: 100%;
+  width: 100%;
+  overflow: visible;
 }
-.editing-image
-{
-  height: 50%;
-  opacity: 0;
-  transition: 
-  height 0.5s,
-  opacity 1.5s;
+
+/* Keep Visual Blocks toolbar anchored to the top */
+.blocky-editor .button-row {
+  margin: 0.25rem 0 0.5rem;
 }
-.editing-image:active
-{
-  height: 70%;
+
+/* Let the editor fill remaining space under the toolbar and image */
+.blocky-editor .editor {
+  flex: 1 1 auto;
+}
+
+.editing-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 50vh;
+  margin: 0.5rem 0 0.2rem 0;
   opacity: 1;
-}
-.editing-image:hover
-{
-  height: 70;
-  opacity: 1;
+  object-fit: contain;
+  border-radius: 0.5rem;
+  transition: opacity 0.4s ease;
 }
 
 
@@ -95,10 +154,8 @@
   padding: 0.2rem;
   margin-right: 0.5rem;
   box-shadow: 2px 3px 18px 0px rgba(0, 0, 0, 0.34);
-  overflow-y: auto;
-  max-height: 70vh;
-  min-height: 10vh;
-  overflow-x: hidden;
+  overflow: hidden;
+  min-height: 300px;
   resize: vertical;
 }
 
@@ -107,6 +164,7 @@
 div:nth-of-type(2)::-webkit-resizer {
   background: transparent;
 }
+
 .code-title {
   margin: 1rem;
   font-weight: 500;
@@ -143,25 +201,35 @@ div:nth-of-type(2)::-webkit-resizer {
   font-size: medium;
   background-color: #9d9d9d;
 }
+
+.button-group a:hover:not(.btn) {
+  background-color: #1a3a59ec;
+}
+
 .button-group button:hover {
   cursor: pointer;
 }
-#run-button:hover {
+
+#run-button:hover:not(.btn) {
   background-color: #45bd98;
 }
 
-#copy-button:hover {
+#copy-button:hover:not(.btn) {
   background-color: #32aac6;
 }
-#stop-button:hover {
+
+#stop-button:hover:not(.btn) {
   background-color: #ef476f;
 }
-#export-button:hover {
+
+#export-button:hover:not(.btn) {
   background-color: #7c4a18;
 }
-#edit-button:hover {
+
+#edit-button:hover:not(.btn) {
   background-color: #1a3a59ec;
 }
+
 .code-snippet {
   display: flex;
   flex-direction: column;
@@ -169,18 +237,22 @@ div:nth-of-type(2)::-webkit-resizer {
   text-align: left;
   background-color: #f3f3f3;
   width: 100%;
-  height: 100%;
-  max-height: 35rem;
+  flex: 1;
   overflow-y: auto;
+  border-radius: 4px;
 }
+
 .python {
   display: block;
 }
 
 .disabled {
-  pointer-events: none; /* Disable pointer events */
-  opacity: 0.6; /* Optionally, make it visually indicate the disabled state */
+  pointer-events: none;
+  /* Disable pointer events */
+  opacity: 0.6;
+  /* Optionally, make it visually indicate the disabled state */
 }
+
 .output {
   grid-area: output;
   background-color: white;
@@ -189,32 +261,322 @@ div:nth-of-type(2)::-webkit-resizer {
   box-shadow: 2px 3px 18px 0px rgba(0, 0, 0, 0.34);
   padding: 0.2rem;
   margin-right: 0.5rem;
-  /* overflow-y: auto; */
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
+
+/* Output section button row - horizontal layout for tabs and buttons */
+.output .button-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #e0e0e0;
+  margin-bottom: 0.5rem;
+  min-height: 48px;
+  padding: 0 0.25rem;
+}
+
 .output-title {
   margin: 1rem;
   font-weight: 500;
 }
 
-.terminal-output-div {
-  overflow-y: auto;
-  resize: vertical;
+/* Output Tabs Styles */
+.output-tabs {
+  display: flex;
+  border-bottom: none;
+  margin-bottom: 0;
+  height: auto;
+  min-height: 44px;
+  align-items: center;
 }
-.terminal-output {
-  margin-left: 1rem;
-  color: #9d9d9d;
-  width: 95%;
-  overflow-y: auto;
-  resize: vertical;
+
+.tab-button {
+  background: none;
   border: none;
+  padding: 0.75rem 1.25rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #666;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-width: 140px;
+  height: auto;
+  min-height: 44px;
+  position: relative;
+  white-space: nowrap;
+}
+
+.tab-button:hover {
+  color: #333;
+  background-color: #f8f9fa;
+}
+
+.tab-button.active {
+  color: #1a3a59ec;
+  border-bottom: 3px solid #1a3a59ec;
+  font-weight: 500;
+  background-color: #fff;
+}
+
+.output-panel {
+  display: none;
+  height: calc(100% - 48px);
+  min-height: 200px;
+  max-height: calc(100vh - 200px);
+  padding: 0.5rem;
+  overflow: hidden;
+  width: 100%;
+}
+
+.output-panel.active {
+  display: flex;
+  flex-direction: column;
+  height: calc(100% - 48px);
+  min-height: 200px;
+  max-height: calc(100vh - 200px);
+  overflow: hidden;
+  width: 100%;
+}
+
+/* Output section button group alignment */
+.output .button-group {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  gap: 0.5rem;
+}
+
+/* Ensure buttons in output section are properly aligned */
+.output .button-group .button {
+  height: auto;
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  margin: 0;
+}
+
+/* Specific styling for Clear and Reset buttons */
+#clear-button,
+#stop-button {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 500;
+  min-width: 80px;
+  gap: 0.5rem;
+}
+
+/* Ensure icon and text alignment in buttons */
+#clear-button i,
+#stop-button i {
+  margin-right: 0;
+  font-size: 0.875rem;
+}
+
+/* Serial Monitor Styles */
+.serial-monitor-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  height: 100%;
+  min-height: 180px;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.serial-terminal {
+  flex: 1;
+  background-color: #fafafa;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 0.75rem;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.4;
+  color: #000000;
+  overflow-y: auto;
+  overflow-x: hidden;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  min-height: 150px;
+  outline: none;
+  caret-color: #000000;
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+}
+
+.serial-terminal:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+/* Terminal prompt styling */
+.serial-terminal .prompt {
+  color: #0066cc;
+  font-weight: bold;
+}
+
+.serial-terminal .command {
+  color: #000000;
+}
+
+.serial-terminal .output {
+  color: #333333;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.serial-terminal .error {
+  color: #cc0000;
+}
+
+.serial-terminal .welcome {
+  color: #006600;
+}
+
+/* Ensure proper text wrapping for long lines */
+.serial-terminal span {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  display: inline;
+}
+
+/* Dropdown Button Styles */
+.dropdown-button {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  right: 0;
+  background-color: #f9f9f9;
+  min-width: 120px;
+  box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  border-radius: 0.3rem;
+  overflow: hidden;
+}
+
+/* Default dropdown hover behavior for all dropdowns */
+.dropdown-button:hover .dropdown-content {
+  display: block;
+}
+
+/* ESP32 specific dropdown behavior - only when enabled */
+.dropdown-button.dropdown-enabled:hover .dropdown-content {
+  display: block !important;
+}
+
+/* Ensure ESP32 dropdown stays hidden when disabled */
+.dropdown-button.dropdown-disabled .dropdown-content {
+  display: none !important;
+}
+
+.dropdown-item {
+  color: var(--fg);
+  padding: 0.3rem 0.8rem;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: medium;
+  font-weight: 400;
+  background-color: transparent;
+  border: 1px solid var(--border);
+  border-radius: 0.3rem;
+  margin: 0.2rem;
+  min-width: 4rem;
+  height: 1.4rem;
+  transition: background-color 0.2s ease;
+  cursor: pointer;
+}
+
+.dropdown-item:hover {
+  background: rgba(15, 23, 42, 0.05);
+}
+
+.dropdown-item i {
+  width: 1rem;
+  text-align: center;
+}
+
+.dropdown-arrow {
+  font-size: 0.7rem;
+  margin-left: 0.3rem;
+  opacity: 0.7;
+}
+
+.terminal-output-div {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+}
+
+.terminal-output {
+  color: #333;
+  width: 100%;
+  max-width: 100%;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  resize: none;
+  border: 1px solid #ddd;
+  padding: 0.75rem;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.4;
+  background-color: #fafafa;
+  border-radius: 4px;
+  min-height: 150px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
 }
 
 .terminal-output:focus {
-  border: 0 none #fff;
-  overflow: hidden;
   outline: none;
+  border-color: var(--primary);
 }
-#clear-button:hover {
+
+/* Consistent scrollbar styling for all terminal outputs */
+.terminal-output::-webkit-scrollbar,
+.serial-terminal::-webkit-scrollbar {
+  width: 8px;
+}
+
+.terminal-output::-webkit-scrollbar-track,
+.serial-terminal::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.terminal-output::-webkit-scrollbar-thumb,
+.serial-terminal::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.terminal-output::-webkit-scrollbar-thumb:hover,
+.serial-terminal::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+#clear-button:hover:not(.btn) {
   background-color: #db9e14;
 }
 
@@ -223,32 +585,37 @@ div:nth-of-type(2)::-webkit-resizer {
   font-family: "Roboto", sans-serif;
   font-weight: 300;
   font-style: normal;
-  grid-template-rows: 1fr 8fr 3fr;
+  grid-template-rows: 60px 3fr 2fr;
+  grid-template-columns: 55fr 45fr;
   grid-template-areas:
-    "navBar navBar navBar navBar"
-    "editor editor editor code"
-    "editor editor editor output";
+    "navBar navBar"
+    "editor code"
+    "editor output";
   grid-gap: 0.5rem;
-  height: calc(100vh - 0.5rem);
+  height: 100vh;
+  overflow: hidden;
 }
+
 .container-editing {
   display: grid;
   font-family: "Roboto", sans-serif;
   font-weight: 300;
   font-style: normal;
-  grid-template-rows: 1fr 8fr 3fr;
+  grid-template-rows: 60px 3fr 2fr;
   grid-template-areas:
     "navBar navBar navBar navBar"
     "code code code code"
     "output output output output";
   grid-gap: 0.5rem;
-  height: calc(100vh - 0.5rem);
+  height: 100vh;
+  overflow: hidden;
 }
 
 body {
   background-color: rgba(77, 151, 255, 0.25);
   margin: 0;
 }
+
 .blocklyMainBackground {
   stroke: none;
 }
@@ -292,12 +659,553 @@ body {
   height: initial;
 }
 
+/* Ensure Blockly workspace can display scrollbars and UI elements properly */
+.blocklyDiv {
+  overflow: visible !important;
+}
+
+.blocklyMainWorkspace {
+  overflow: visible !important;
+}
+
+/* Ensure Blockly SVG can show all content */
+.blocklySvg {
+  overflow: visible !important;
+}
+
 @media screen and (max-width: 768px) {
   .container {
+    grid-template-columns: 1fr;
     grid-template-areas:
-      "navBar navBar navBar navBar"
-      "editor editor editor editor"
-      "code code code code"
-      "output output output output";
+      "navBar"
+      "editor"
+      "code"
+      "output";
+  }
+}
+
+/* --- shadcn-like button system (layered over .button) --- */
+:root {
+  --radius: 10px;
+  --btn-h: 36px;
+
+  --fg: #0f172a;
+  --bg: #ffffff;
+  --muted: #64748b;
+  --border: #e2e8f0;
+  --ring-color: rgba(37, 99, 235, 0.35);
+
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+
+  --secondary: #111827;
+  --secondary-foreground: #ffffff;
+
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+
+  /* Added semantic colors */
+  --success: #22c55e;
+  --success-foreground: #ffffff;
+  --warning: #f59e0b;
+  --warning-foreground: #111827;
+}
+
+/* Dark mode disabled - maintaining consistent light theme for buttons */
+
+/* Base */
+.button.btn,
+.btn {
+  -webkit-tap-highlight-color: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  height: var(--btn-h);
+  padding: 0 0.875rem;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  background: var(--btn-bg, var(--secondary));
+  color: var(--btn-fg, var(--secondary-foreground));
+  font: 500 0.95rem/1.2 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
+  text-decoration: none;
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
+  transition:
+    background-color .2s ease,
+    color .2s ease,
+    border-color .2s ease,
+    box-shadow .2s ease,
+    transform .08s ease;
+}
+
+.button.btn:hover,
+.btn:hover {
+  filter: brightness(0.98);
+}
+
+/* Slightly stronger hover for contained variants */
+.btn-primary:hover,
+.btn-secondary:hover,
+.btn-destructive:hover {
+  filter: brightness(0.96);
+}
+
+.button.btn:active,
+.btn:active {
+  transform: translateY(0.5px);
+}
+
+.button.btn:focus-visible,
+.btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ring-color);
+}
+
+/* Sizes */
+.btn-sm {
+  height: 32px;
+  padding: 0 0.65rem;
+  font-size: 0.9rem;
+  border-radius: calc(var(--radius) - 2px);
+}
+
+.btn-lg {
+  height: 42px;
+  padding: 0 1rem;
+  font-size: 1rem;
+}
+
+.btn-icon {
+  width: var(--btn-h);
+  padding: 0;
+}
+
+/* Variants */
+.btn-primary {
+  --btn-bg: var(--primary);
+  --btn-fg: var(--primary-foreground);
+}
+
+.btn-secondary {
+  --btn-bg: var(--secondary);
+  --btn-fg: var(--secondary-foreground);
+}
+
+.btn-outline {
+  --btn-bg: transparent;
+  --btn-fg: var(--fg);
+  border-color: var(--border);
+}
+
+.btn-outline:hover {
+  background: rgba(15, 23, 42, 0.05);
+}
+
+/* Dark mode outline hover effect removed */
+
+.btn-ghost {
+  --btn-bg: transparent;
+  --btn-fg: var(--fg);
+}
+
+.btn-ghost:hover {
+  background: rgba(15, 23, 42, 0.06);
+}
+
+/* Dark mode ghost hover effect removed */
+
+.btn-destructive {
+  --btn-bg: var(--destructive);
+  --btn-fg: var(--destructive-foreground);
+}
+
+.btn-link {
+  --btn-bg: transparent;
+  --btn-fg: var(--primary);
+  border-color: transparent;
+  padding: 0;
+  height: auto;
+}
+
+.btn-link:hover {
+  text-decoration: underline;
+}
+
+/* New semantic variants */
+.btn-success {
+  --btn-bg: var(--success);
+  --btn-fg: var(--success-foreground);
+}
+
+.btn-success:hover {
+  background-color: #16a34a;
+}
+
+.btn-warning {
+  --btn-bg: var(--warning);
+  --btn-fg: var(--warning-foreground);
+}
+
+.btn-warning:hover {
+  background-color: #d97706;
+}
+
+/* Disabled */
+.btn[aria-disabled="true"],
+.btn:disabled,
+.button.btn.disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Optional: normalize icon sizing; gap handles spacing */
+.btn i {
+  font-size: 0.95em;
+  line-height: 1;
+}
+
+/* Improve outline contrast on dark nav bar */
+.nav-bar .btn-outline {
+  border-color: rgba(255, 255, 255, 0.5);
+  color: #ffffff;
+}
+
+.nav-bar .btn-outline:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* Library Manager Modal Styles */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+}
+
+.modal-content {
+  background-color: #f9f9f9;
+  margin: 3% auto;
+  padding: 0;
+  border: 1px solid #ccc;
+  border-radius: 0.3rem;
+  width: 90%;
+  max-width: 900px;
+  max-height: 85vh;
+  box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+  font-family: "Roboto", sans-serif;
+}
+
+/* Removed modalSlideIn animation to keep styling simple and consistent */
+
+.modal-header {
+  background-color: #9d9d9d;
+  color: white;
+  padding: 1rem 1.5rem;
+  border-radius: 0.3rem 0.3rem 0 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 400;
+  flex: 1;
+}
+
+.modal-header p {
+  margin: 0;
+  opacity: 0.9;
+  font-size: 0.9rem;
+  font-weight: 300;
+}
+
+.close {
+  position: absolute;
+  right: 1rem;
+  top: 1rem;
+  color: white;
+  font-size: 1.5rem;
+  font-weight: bold;
+  cursor: pointer;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+  background: none;
+  border: none;
+  padding: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close:hover {
+  opacity: 1;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 0.2rem;
+}
+
+.modal-body {
+  padding: 1.5rem;
+  max-height: 65vh;
+  overflow-y: auto;
+  background-color: #ffffff;
+}
+
+.library-search {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  align-items: center;
+}
+
+.library-search input {
+  flex: 1;
+  padding: 0.5rem 0.8rem;
+  border: 1px solid #ccc;
+  border-radius: 0.3rem;
+  font-size: 0.9rem;
+  font-family: "Roboto", sans-serif;
+  transition: border-color 0.2s;
+}
+
+.library-search input:focus {
+  outline: none;
+  border-color: #1a3a59;
+}
+
+.library-search button {
+  min-width: 4rem;
+  height: 2.4rem;
+  padding: 0.3rem 0.8rem;
+  background-color: #9d9d9d;
+  color: white;
+  border: none;
+  border-radius: 0.3rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 400;
+  transition: background-color 0.2s;
+}
+
+.library-search button:hover {
+  background-color: #1a3a59ec;
+}
+
+.library-status {
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  display: none;
+}
+
+.library-status.success {
+  background: #f0fff4;
+  color: #22543d;
+  border: 1px solid #c6f6d5;
+  display: block;
+}
+
+.library-status.error {
+  background: #fff5f5;
+  color: #742a2a;
+  border: 1px solid #fed7d7;
+  display: block;
+}
+
+.library-status.info {
+  background: #ebf8ff;
+  color: #1a365d;
+  border: 1px solid #bee3f8;
+  display: block;
+}
+
+.library-list {
+  display: grid;
+  gap: 12px;
+}
+
+.library-loading {
+  text-align: center;
+  padding: 40px 20px;
+  color: #718096;
+  font-size: 16px;
+}
+
+.library-item {
+  border: 1px solid #ddd;
+  border-radius: 0.3rem;
+  padding: 1rem;
+  margin-bottom: 0.5rem;
+  transition: all 0.2s;
+  background: white;
+}
+
+.library-item:hover {
+  border-color: #1a3a59;
+  box-shadow: 0px 4px 8px 0px rgba(0, 0, 0, 0.1);
+}
+
+.library-item.installing {
+  border-color: #f4a261;
+  background: #fdf8f1;
+}
+
+.library-item.installed {
+  border-color: #2a9d8f;
+  background: #f1f9f8;
+}
+
+.library-header {
+  display: flex;
+  justify-content: between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.library-info {
+  flex: 1;
+}
+
+.library-name {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: #333;
+  margin: 0 0 0.5rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.library-badge {
+  font-size: 0.7rem;
+  font-weight: 400;
+  padding: 0.2rem 0.5rem;
+  border-radius: 0.2rem;
+  text-transform: uppercase;
+}
+
+.library-badge.popular {
+  background: #e8f5e8;
+  color: #2a9d8f;
+  border: 1px solid #2a9d8f;
+}
+
+.library-badge.category {
+  background: #f9f9f9;
+  color: #666;
+  border: 1px solid #ccc;
+}
+
+.library-description {
+  color: #666;
+  font-size: 0.9rem;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.library-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.library-button {
+  /* Inherit from .button class and override specific styles */
+  min-width: 5rem;
+  height: 2rem;
+  padding: 0.3rem 0.8rem;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.library-button.install {
+  background-color: #9d9d9d;
+  color: white;
+}
+
+.library-button.install:hover:not(:disabled) {
+  background-color: #1a3a59ec;
+}
+
+.library-button.installing {
+  background-color: #f4a261;
+  color: white;
+  cursor: not-allowed;
+}
+
+.library-button.installed {
+  background-color: #2a9d8f;
+  color: white;
+  cursor: default;
+}
+
+.library-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.library-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: #718096;
+}
+
+.library-empty i {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+/* Responsive design for library modal */
+@media (max-width: 768px) {
+  .modal-content {
+    width: 95%;
+    margin: 2% auto;
+    max-height: 90vh;
+  }
+
+  .modal-header {
+    padding: 16px 20px;
+  }
+
+  .modal-header h2 {
+    font-size: 20px;
+  }
+
+  .modal-body {
+    padding: 20px;
+  }
+
+  .library-search {
+    flex-direction: column;
+  }
+
+  .library-search button {
+    width: 100%;
+  }
+
+  .library-header {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .library-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .library-button {
+    flex: 1;
   }
 }

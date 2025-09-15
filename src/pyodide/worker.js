@@ -20,17 +20,17 @@ async function initPyodide() {
 
 initPyodide().then(() => {
     isready = true;
-    self.postMessage({ responce: "result", result: 'Python 3  .10' });
+    self.postMessage({ responce: "result", result: 'Python 3.10' });
 }
 );
 function getSyntaxError(message) {
     const syntaxErrorIndex = message.indexOf('Error');
     if (syntaxErrorIndex !== -1) {
-      return message.substring(syntaxErrorIndex);
+        return message.substring(syntaxErrorIndex);
     } else {
-      return 'Unknown error occurred. Please check your code and try again.';
+        return 'Unknown error occurred. Please check your code and try again.';
     }
-  }
+}
 
 
 function stdoutHandler(x) {
@@ -60,17 +60,20 @@ function codeRunner(code) {
         initPyodide();
         isready = true;
     }
-    try 
-    {
-        pyodide.runPython(code)
+    try {
+        pyodide.runPython(code);
+        // Send completion message for execution state management
+        self.postMessage({ command: "run_complete", success: true });
     }
     catch (err) {
         console.log(err.message);
         let error = getSyntaxError(err.message);
         console.log(error);
         self.postMessage({ responce: "error", error: error });
+        // Send completion message even on error
+        self.postMessage({ command: "run_complete", success: false, error: error });
     }
-    
+
 }
 
 
